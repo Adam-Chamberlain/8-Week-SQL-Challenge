@@ -119,7 +119,74 @@ I then used that table to create a second query to only pull results where the r
 A and C's favorite product is ramen, which they each bought 3 times. B has a 3-way tie for their favorite product, buying each of them twice.
 
 ### 6. Which item was purchased first by the customer after they became a member?
+
+```
+WITH temp1 AS (
+  SELECT
+	s.customer_id,
+    s.order_date,
+	ms.join_date,
+    m.product_name
+FROM dannys_diner.sales s
+JOIN dannys_diner.menu m
+ON s.product_id = m.product_id
+LEFT JOIN dannys_diner.members ms
+ON s.customer_id = ms.customer_id
+WHERE join_date < order_date),
+
+temp2 AS(
+  SELECT *,
+DENSE_RANK() OVER(PARTITION BY customer_id ORDER BY order_date) AS ranking
+FROM temp1)
+
+SELECT customer_id, product_name
+FROM temp2
+WHERE ranking = 1
+```
+This one took two temporary tables. The first one, called `temp1`, joins all the tables and filters out data so that only visits after the customer becomes a member are included. The second one takes that first set of data and ranks them with DENSE_RANK, giving the earliest visit per customer rank 1. Lastly, using the data with the rankings from the table `temp2`, I filtered data to only show what each customer ordered on the rows with the ranking 1, which are their earliest visits *after* they became a member.
+
+| customer_id | product_name |
+| ----------- | ------------ |
+| A           | ramen        |
+| B           | sushi        |
+
+Customer A's first purchase after becoming a member was ramen, and customer B's was sushi.
+
 ### 7. Which item was purchased just before the customer became a member?
+
+```
+WITH temp1 AS (
+  SELECT
+	s.customer_id,
+    s.order_date,
+	ms.join_date,
+    m.product_name
+FROM dannys_diner.sales s
+JOIN dannys_diner.menu m
+ON s.product_id = m.product_id
+LEFT JOIN dannys_diner.members ms
+ON s.customer_id = ms.customer_id
+WHERE join_date > order_date),
+
+temp2 AS(
+  SELECT *,
+DENSE_RANK() OVER(PARTITION BY customer_id ORDER BY order_date DESC) AS ranking
+FROM temp1)
+
+SELECT customer_id, product_name
+FROM temp2
+WHERE ranking = 1
+```
+This uses the same query as question 6, but with two changes. The join date should be before becoming a member instead of after, so the sign in the WHERE clause in the first temporary table was flipped. In the DENSE_RANK clause, instead of ordering it in ascending order, it should be descending instead, since it is asking for the most recent date instead of the earliest date.
+
+| customer_id | product_name |
+| ----------- | ------------ |
+| A           | sushi        |
+| A           | curry        |
+| B           | sushi        |
+
+Customer A ordered both sushi and curry on the same day, though it is unsure which was the most recent before becoming a member, as time information is not given. Customer B's last order before becoming a member was sushi.
+
 ### 8. What is the total items and amount spent for each member before they became a member?
 ### 9. If each $1 spent equates to 10 points and sushi has a 2x points multiplier - how many points would each customer have?
 ### 10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
