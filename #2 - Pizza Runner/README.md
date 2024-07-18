@@ -184,9 +184,78 @@ This one just required a few changes from the last one. Instead of using OR in t
 | 1    |
 
 ### 9. What was the total volume of pizzas ordered for each hour of the day?
+
+```
+SELECT 
+EXTRACT(HOUR FROM order_time) AS hour,
+COUNT(order_id) AS amount
+FROM pizza_runner.customer_orders
+GROUP BY hour
+ORDER BY hour
+```
+For this, the hour of the day is extracted from the order time, and with that, it counts the number of pizzas ordered per hour of the day, regardless of what day the order was placed. If it only asked for orders that were successfully delivered, a WHERE clause could easily be added to filter out cancelled orders.
+
+| hour | amount |
+| ---- | ------ |
+| 11   | 1      |
+| 13   | 3      |
+| 18   | 3      |
+| 19   | 1      |
+| 21   | 3      |
+| 23   | 3      |
+
 ### 10. What was the volume of orders for each day of the week?
+
+```
+WITH temp AS (
+SELECT 
+    EXTRACT(isodow FROM order_time) AS day,
+    COUNT(order_id) AS amount
+FROM pizza_runner.customer_orders
+GROUP BY day
+ORDER BY day)
+
+SELECT
+    CASE WHEN day = 1 THEN 'Monday'
+    WHEN day = 2 THEN 'Tuesday'
+    WHEN day = 3 THEN 'Wednesday'
+    WHEN day = 4 THEN 'Thursday'
+    WHEN day = 5 THEN 'Friday'
+    WHEN day = 6 THEN 'Saturday'
+    WHEN day = 7 THEN 'Sunday' ELSE null END AS day,
+    amount
+FROM temp
+```
+Here, "isodow" is extracted from `order_time`, which is the day of the week (1 = Monday, 2 = Tuesday, etc). The first query groups the amount of pizzas ordered per day of the week, and the second one changes the numbers to the actual name of the weekday using a long CASE statement.
+
+| day       | amount |
+| --------- | ------ |
+| Wednesday | 5      |
+| Thursday  | 3      |
+| Friday    | 1      |
+| Saturday  | 5      |
+
 ## B. Runner and Customer Experience
 ### 1. How many runners signed up for each 1 week period? (i.e. week starts 2021-01-01)
+
+```
+SELECT
+    CASE WHEN registration_date BETWEEN '2021-01-01' AND '2021-01-07' THEN 'Week 1: 1/1-1/7'
+    WHEN registration_date BETWEEN '2021-01-08' AND '2021-01-14' THEN 'Week 2: 1/8-1/14'
+    WHEN registration_date BETWEEN '2021-01-15' AND '2021-01-21' THEN 'Week 3: 1/15-1/21' ELSE null END AS week,
+    COUNT(runner_id) AS signups
+FROM pizza_runner.runners
+GROUP BY week
+ORDER BY week
+```
+I had to use a CASE statement to number each week period. If I used EXTRACT(WEEK) instead, it would start each week period on Monday, which is not the case here, since January 1, 2021 was on a Friday. I labeled each week within the query to avoid confusion.
+
+| week              | signups |
+| ----------------- | ------- |
+| Week 1: 1/1-1/7   | 2       |
+| Week 2: 1/8-1/14  | 1       |
+| Week 3: 1/15-1/21 | 1       |
+
 ### 2. What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pickup the order?
 ### 3. Is there any relationship between the number of pizzas and how long the order takes to prepare?
 ### 4. What was the average distance travelled for each customer?
