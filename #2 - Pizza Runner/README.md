@@ -283,12 +283,189 @@ This took a lot of cleaning yet again; the `pickup_time` had "null" text and was
 | 1         | 15           |
 
 ### 3. Is there any relationship between the number of pizzas and how long the order takes to prepare?
+
+```
+WITH temp AS (
+SELECT
+  c.order_id,
+  c.order_time,
+  CASE WHEN r.pickup_time LIKE 'null' THEN null ELSE CAST(r.pickup_time AS TIMESTAMP) END AS pickup
+  FROM pizza_runner.runner_orders r
+JOIN pizza_runner.customer_orders c
+ON r.order_id = c.order_id)
+
+SELECT
+  order_id,
+  COUNT(order_id) AS volume,
+  DATE_PART('minute', pickup - order_time) AS time
+  FROM temp
+  GROUP BY order_id, pickup, order_time
+  ORDER BY order_id
+```
+For this one, I used the same subquery to pull relevant cleaned information, the only difference being the order id being pulled instead of the runner id. I then counted the amount of pizzas ordered and grouped it by the order id to get the total number of pizzas ordered per order id. This chart shows a clear trend; most orders with one pizza take about 10 minutes, with the exception of order 8. Orders with two pizzas take longer, with one taking 15 minutes and one taking 21 minutes. Order 4, which had 3 pizzas, took the longest, at 29 minutes.
+
+| order_id | volume | time |
+| -------- | ------ | ---- |
+| 1        | 1      | 10   |
+| 2        | 1      | 10   |
+| 3        | 2      | 21   |
+| 4        | 3      | 29   |
+| 5        | 1      | 10   |
+| 6        | 1      |      |
+| 7        | 1      | 10   |
+| 8        | 1      | 20   |
+| 9        | 1      |      |
+| 10       | 2      | 15   |
+
 ### 4. What was the average distance travelled for each customer?
+
+```
+WITH temp AS(
+SELECT
+DISTINCT c.order_id,
+c.customer_id,
+CASE WHEN r.distance LIKE '%km' THEN TRIM('%km' FROM r.distance)
+WHEN r.distance LIKE 'null' THEN null ELSE r.distance END AS distance
+FROM pizza_runner.customer_orders c
+JOIN pizza_runner.runner_orders r
+ON c.order_id = r.order_id
+WHERE CASE WHEN r.distance LIKE 'null' THEN null ELSE r.distance END IS NOT NULL)
+
+SELECT
+customer_id,
+AVG(CAST(distance AS DECIMAL)) AS avg_distance
+FROM temp
+GROUP BY customer_id
+ORDER BY customer_id
+```
+The `distance` column had inconsistencies with how the data was inputted, so it required lots of cleaning. In the subquery, I removed "km" from all the numbers that included it using TRIM and changed the null text to the actual null value. I then used CAST to convert the numbers to decimals and added up the average for each customer.
+
+| customer_id | avg_distance        |
+| ----------- | ------------------- |
+| 101         | 20.0000000000000000 |
+| 102         | 18.4000000000000000 |
+| 103         | 23.4000000000000000 |
+| 104         | 10.0000000000000000 |
+| 105         | 25.0000000000000000 |
+
 ### 5. What was the difference between the longest and shortest delivery times for all orders?
+
+```
+WITH temp AS (
+SELECT
+CAST(CASE WHEN duration LIKE '%minutes' THEN TRIM('minutes' FROM duration)
+WHEN duration LIKE '%mins' THEN TRIM('mins' FROM duration)
+WHEN duration LIKE '%minute' THEN TRIM('minute' FROM duration)
+WHEN duration LIKE 'null' THEN NULL ELSE duration END AS INTEGER) AS delivery_duration
+FROM pizza_runner.runner_orders)
+
+SELECT
+MAX(delivery_duration) - MIN(delivery_duration) AS difference
+FROM temp
+```
+The `duration` tab needed a lot of cleaning, as it was a mix of just numbers, x mins, x minutes, and x minute. I used a long CASE statement to clean up all inconsistencies, and I used CAST around that to convert them all to integers. I then subtracted the max value from the min value, getting 30 minutes as the difference.
+
+| difference |
+| ---------- |
+| 30         |
+
 ### 6. What was the average speed for each runner for each delivery and do you notice any trend for these values?
+
+```
+WITH temp AS(
+SELECT
+runner_id,
+CAST(CASE WHEN distance LIKE '%km' THEN TRIM('km' FROM distance)
+  WHEN distance LIKE 'null' THEN NULL ELSE distance END AS DECIMAL) AS distance,
+CAST(CASE WHEN duration LIKE '%minutes' THEN TRIM('minutes' FROM duration)
+WHEN duration LIKE '%mins' THEN TRIM('mins' FROM duration)
+WHEN duration LIKE '%minute' THEN TRIM('minute' FROM duration)
+WHEN duration LIKE 'null' THEN NULL ELSE duration END AS DECIMAL) AS duration
+FROM pizza_runner.runner_orders)
+
+SELECT
+runner_id,
+ROUND(distance / duration * 60, 2) AS avg_km_per_hour
+FROM temp
+WHERE distance IS NOT NULL
+ORDER BY runner_id, avg_km_per_hour DESC
+```
+The subquery cleaned up the `distance` and `duration` columns, removing inconsistancies and converting them to decimal values. Then, they are calculated into the average KM per hour per order. Runner 1's average fluctuates between 37.5 and 60 KM/h, while runner 2's goes from 35.1 to a whopping 93.6 KM/h.
+
+| runner_id | avg_km_per_hour |
+| --------- | --------------- |
+| 1         | 60.00           |
+| 1         | 44.44           |
+| 1         | 40.20           |
+| 1         | 37.50           |
+| 2         | 93.60           |
+| 2         | 60.00           |
+| 2         | 35.10           |
+| 3         | 40.00           |
+
 ### 7. What is the successful delivery percentage for each runner?
+
+```
+WITH temp AS (
+SELECT
+runner_id,
+CASE WHEN cancellation LIKE 'null' or cancellation LIKE '' OR cancellation IS NULL THEN 1 ELSE NULL END AS cancellation
+FROM pizza_runner.runner_orders)
+
+SELECT
+runner_id,
+100 * COUNT(cancellation) / COUNT(*) AS avg
+FROM temp
+GROUP BY runner_id
+ORDER BY runner_id
+```
+The subquery basically flips all of the contents of the `cancellation` column, making non-null values null and making null values 1. This allowed me to easily count up the amount of orders that were successfully delivered. I found the average by dividing the number of orders that were not cancelled by the total amount of orders, and then I grouped them per runner.
+
+| runner_id | avg |
+| --------- | --- |
+| 1         | 100 |
+| 2         | 75  |
+| 3         | 50  |
+
 ## C. Ingredient Optimization
 ### 1. What are the standard ingredients for each pizza?
+
+```
+WITH temp AS (
+SELECT
+pn.pizza_name,
+CAST(UNNEST(STRING_TO_ARRAY(pr.toppings, ',')) AS INTEGER) AS topping_id
+FROM pizza_runner.pizza_names pn
+JOIN pizza_runner.pizza_recipes pr
+ON pn.pizza_id = pr.pizza_id)
+
+SELECT
+t.pizza_name,
+pt.topping_name
+FROM temp t
+JOIN pizza_runner.pizza_toppings pt
+ON t.topping_id = pt.topping_id
+ORDER BY t.pizza_name, pt.topping_id
+```
+Since the pizza ingredients are all in one column and separated by commas, they needed to be separated. I did so using UNNEST. Using STRING_TO_ARRAY, it found all of the ingredients separated by commas and put them in separate rows. I then converted them to integers so that they could easily be joined with the `pizza_toppings` table in order to easily identify which number corresponds to which ingredient.
+
+| pizza_name | topping_name |
+| ---------- | ------------ |
+| Meatlovers | Bacon        |
+| Meatlovers | BBQ Sauce    |
+| Meatlovers | Beef         |
+| Meatlovers | Cheese       |
+| Meatlovers | Chicken      |
+| Meatlovers | Mushrooms    |
+| Meatlovers | Pepperoni    |
+| Meatlovers | Salami       |
+| Vegetarian | Cheese       |
+| Vegetarian | Mushrooms    |
+| Vegetarian | Onions       |
+| Vegetarian | Peppers      |
+| Vegetarian | Tomatoes     |
+| Vegetarian | Tomato Sauce |
+
 ### 2. What was the most commonly added extra?
 ### 3. What was the most common exclusion?
 ### 4. Generate an order item for each record in the customers_orders table in the format of one of the following:
