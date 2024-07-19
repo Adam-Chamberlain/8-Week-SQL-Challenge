@@ -257,6 +257,31 @@ I had to use a CASE statement to number each week period. If I used EXTRACT(WEEK
 | Week 3: 1/15-1/21 | 1       |
 
 ### 2. What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pickup the order?
+
+```
+WITH temp AS (
+SELECT
+  r.runner_id,
+  c.order_time,
+  CASE WHEN r.pickup_time LIKE 'null' THEN null ELSE CAST(r.pickup_time AS TIMESTAMP) END AS pickup
+  FROM pizza_runner.runner_orders r
+JOIN pizza_runner.customer_orders c
+ON r.order_id = c.order_id)
+
+SELECT
+  runner_id,
+  DATE_PART('minute', AVG(pickup - order_time)) AS average_time
+  FROM temp
+  GROUP BY runner_id
+```
+This took a lot of cleaning yet again; the `pickup_time` had "null" text and was not in the timestamp format because of that. I used a CASE statement to convert null text to actual null values and then converted the times to timestamps. This allowed me to subtract the order time from it to get the exact time difference between when the order was placed and when the order was picked up. I used DATE_PART to only pull the amount of minutes rather than including seconds and milliseconds, as the question only asks for minutes.
+
+| runner_id | average_time |
+| --------- | ------------ |
+| 3         | 10           |
+| 2         | 23           |
+| 1         | 15           |
+
 ### 3. Is there any relationship between the number of pizzas and how long the order takes to prepare?
 ### 4. What was the average distance travelled for each customer?
 ### 5. What was the difference between the longest and shortest delivery times for all orders?
