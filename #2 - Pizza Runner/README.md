@@ -467,7 +467,69 @@ Since the pizza ingredients are all in one column and separated by commas, they 
 | Vegetarian | Tomato Sauce |
 
 ### 2. What was the most commonly added extra?
+
+```
+WITH temp1 AS (
+SELECT
+order_id,
+CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END AS extras
+FROM pizza_runner.customer_orders),
+
+temp2 AS (
+SELECT
+order_id,
+CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER) AS topping_id
+FROM temp1)
+
+SELECT
+topping_name,
+COUNT(order_id) AS amount
+FROM temp2 t
+JOIN pizza_runner.pizza_toppings pt
+ON t.topping_id = pt.topping_id
+GROUP BY topping_name
+ORDER BY amount DESC
+```
+Since this required lots of cleaning, I used three queries. The first one fixes all the inconsistent null values in the `extras` column. The second one separates the topping ids, since they are in the same column and separated by commas, similar to the previous question. The final query joins it with the pizza toppings table, matches the topping ids with their name, and groups them based on how many times they are counted.
+
+| topping_name | amount |
+| ------------ | ------ |
+| Bacon        | 4      |
+| Chicken      | 1      |
+| Cheese       | 1      |
+
 ### 3. What was the most common exclusion?
+
+```
+WITH temp1 AS (
+SELECT
+order_id,
+CASE WHEN exclusions LIKE '' OR exclusions LIKE 'null' THEN null ELSE exclusions END AS exclusions
+FROM pizza_runner.customer_orders),
+
+temp2 AS (
+SELECT
+order_id,
+CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER) AS topping_id
+FROM temp1)
+
+SELECT
+topping_name,
+COUNT(order_id) AS amount
+FROM temp2 t
+JOIN pizza_runner.pizza_toppings pt
+ON t.topping_id = pt.topping_id
+GROUP BY topping_name
+ORDER BY amount DESC
+```
+This uses the exact same queries as the prior question but with the first two queries referencing the `exclusions` column instead of `extras`.
+
+| topping_name | amount |
+| ------------ | ------ |
+| Cheese       | 4      |
+| Mushrooms    | 1      |
+| BBQ Sauce    | 1      |
+
 ### 4. Generate an order item for each record in the customers_orders table in the format of one of the following:
 - Meat Lovers
 - Meat Lovers - Exclude Beef
