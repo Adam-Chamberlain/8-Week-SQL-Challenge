@@ -608,6 +608,89 @@ This took a LOT of subqueries, but it works!
 
 ### 5. Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients
 - For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
+
+```
+WITH temp1 AS (SELECT
+ROW_NUMBER() OVER() AS row,
+co.order_id,
+co.pizza_id,
+CASE WHEN exclusions LIKE '' OR exclusions LIKE 'null' THEN null ELSE exclusions END AS exclusions,
+CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END AS extras,
+pr.toppings
+FROM pizza_runner.customer_orders co
+  JOIN pizza_runner.pizza_recipes pr
+  ON co.pizza_id = pr.pizza_id
+ORDER BY order_id),
+  
+temp2 AS (SELECT
+row,
+order_id,
+pizza_id,
+CAST(UNNEST(STRING_TO_ARRAY(toppings, ',')) AS INTEGER) AS toppings,
+CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER) AS exclusions,
+CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER) AS extras
+FROM temp1),
+
+temp3 AS (
+SELECT * FROM pizza_runner.pizza_toppings),
+
+temp4 AS (
+SELECT * FROM pizza_runner.pizza_toppings),
+
+temp5 AS (SELECT
+row,
+order_id,
+pizza_id,
+t3.topping_name AS toppings,
+t4.topping_name AS exclusions,
+pt.topping_name AS extras
+FROM temp2 t2
+LEFT JOIN temp3 t3
+ON t2.toppings = t3.topping_id
+LEFT JOIN temp4 t4
+ON t2.exclusions = t4.topping_id
+LEFT JOIN pizza_runner.pizza_toppings pt
+ON t2.extras = pt.topping_id
+ORDER BY row)
+
+SELECT
+t5.order_id,
+CONCAT(CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 'Meat Lovers' ELSE pn.pizza_name END,': ',STRING_AGG(CASE WHEN t5.toppings IN
+(SELECT t5.extras from temp5 t5 WHERE t5.row = t1.row)
+THEN CONCAT('2x',t5.toppings)
+WHEN t5.toppings IN
+(SELECT t5.exclusions from temp5 t5 WHERE t5.row = t1.row)
+THEN null
+ELSE t5.toppings END,', ' ORDER BY t5.toppings ASC)) AS toppings
+FROM temp5 t5
+JOIN temp1 t1
+ON t5.row = t1.row
+JOIN pizza_runner.pizza_names pn
+ON t5.pizza_id = pn.pizza_id
+GROUP BY t5.row, t5.order_id, t5.pizza_id, pn.pizza_name
+ORDER BY order_id
+```
+Yes, that is FIVE CTEs. There is one bug in this code that I have yet to fix: Toppings that were added but not already included are not included on the topping list. One Vegetarian pizza had Bacon added to it, but it does not show properly. I will return to this query at some point to fix it, but I wanted to move on to the next ones.
+
+The first two queries clean and organize the data, separating them by each ingredient. The third and fourth are duplicates of the `pizza_toppings` table, which allow me to match the toppings, exclusions, and extras columns with the proper ingredients all at the same time in the fifth table. Lastly, it all comes together with a very long CONCAT function. If an existing ingredient is found again in the `extras` column, it adds "2x", and if it's found in the `exclusions` column, it is removed.
+
+| order_id | toppings                                                                             |
+| -------- | ------------------------------------------------------------------------------------ |
+| 1        | Meat Lovers: BBQ Sauce, Bacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami   |
+| 2        | Meat Lovers: BBQ Sauce, Bacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami   |
+| 3        | Meat Lovers: BBQ Sauce, Bacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami   |
+| 3        | Vegetarian: Cheese, Mushrooms, Onions, Peppers, Tomato Sauce, Tomatoes               |
+| 4        | Meat Lovers: BBQ Sauce, Bacon, Beef, Chicken, Mushrooms, Pepperoni, Salami           |
+| 4        | Meat Lovers: BBQ Sauce, Bacon, Beef, Chicken, Mushrooms, Pepperoni, Salami           |
+| 4        | Vegetarian: Mushrooms, Onions, Peppers, Tomato Sauce, Tomatoes                       |
+| 5        | Meat Lovers: BBQ Sauce, 2xBacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami |
+| 6        | Vegetarian: Cheese, Mushrooms, Onions, Peppers, Tomato Sauce, Tomatoes               |
+| 7        | Vegetarian: Cheese, Mushrooms, Onions, Peppers, Tomato Sauce, Tomatoes               |
+| 8        | Meat Lovers: BBQ Sauce, Bacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami   |
+| 9        | Meat Lovers: BBQ Sauce, 2xBacon, Beef, 2xChicken, Mushrooms, Pepperoni, Salami       |
+| 10       | Meat Lovers: 2xBacon, Beef, 2xCheese, Chicken, Pepperoni, Salami                     |
+| 10       | Meat Lovers: BBQ Sauce, Bacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami   |
+
 ### 6. What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
 ## D. Pricing and Ratings
 ### 1. If a Meat Lovers pizza costs $12 and Vegetarian costs $10 and there were no charges for changes - how much money has Pizza Runner made so far if there are no delivery fees?
