@@ -535,6 +535,77 @@ This uses the exact same queries as the prior question but with the first two qu
 - Meat Lovers - Exclude Beef
 - Meat Lovers - Extra Bacon
 - Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
+
+```
+WITH temp1 AS (
+SELECT
+ROW_NUMBER() OVER() AS row,
+order_id,
+pizza_id,
+CASE WHEN exclusions LIKE '' OR exclusions LIKE 'null' THEN null ELSE exclusions END AS exclusions,
+  CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END AS extras
+FROM pizza_runner.customer_orders),
+
+temp2 AS (SELECT
+row,
+CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER) AS exclusions,
+CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER) AS extras
+FROM temp1),
+
+temp3 AS (SELECT
+row,
+STRING_AGG(topping_name, ', ') AS exclusions
+FROM temp2 t2
+JOIN pizza_runner.pizza_toppings pt
+ON t2.exclusions = pt.topping_id
+GROUP BY row),
+
+temp4 AS (SELECT
+row,
+STRING_AGG(topping_name, ', ') AS extras
+FROM temp2 t2
+JOIN pizza_runner.pizza_toppings pt
+ON t2.extras = pt.topping_id
+GROUP BY row)
+
+SELECT
+t1.order_id,
+CONCAT(
+  CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 'Meat Lovers' ELSE pn.pizza_name END,
+  CASE WHEN t3.exclusions IS NOT NULL THEN ' - Exclude ' ELSE NULL END, t3.exclusions,
+  CASE WHEN t4.extras IS NOT NULL THEN ' - Extra ' ELSE NULL END, t4.extras) AS order
+FROM temp1 t1
+LEFT JOIN temp3 t3
+ON t1.row = t3.row
+LEFT JOIN temp4 t4
+ON t1.row = t4.row
+JOIN pizza_runner.pizza_names pn
+ON t1.pizza_id = pn.pizza_id
+```
+This took a LOT of subqueries, but it works!
+- temp1 - Cleans data and pulls relevant information. I also added a row number column, which is important for grouping ingredients back together later on.
+- temp2 - Separates all exclusions and extras into separate columns so that they can be properly identified with the `pizza_toppings` table.
+- temp3 - Matches ingredient numbers from the `exclusions` column and groups them back together based on the initial row number in the case where there are multiple exclusions.
+- temp4 - Does the same thing as temp3 but with the `extras` column instead.
+- Main Query - Where it all comes together. Exclusions are pulled from temp3, and extras are pulled from temp4. The previous queries already formatted properly with commas separating them. A CONCAT function brings it all together, using CASE statements to add hyphens and the "Exclude/Extra" text if there are any in the given order.
+
+| order_id | order                                                            |
+| -------- | ---------------------------------------------------------------- |
+| 1        | Meat Lovers                                                      |
+| 2        | Meat Lovers                                                      |
+| 3        | Meat Lovers                                                      |
+| 3        | Vegetarian                                                       |
+| 4        | Meat Lovers - Exclude Cheese                                     |
+| 4        | Meat Lovers - Exclude Cheese                                     |
+| 4        | Vegetarian - Exclude Cheese                                      |
+| 5        | Meat Lovers - Extra Bacon                                        |
+| 6        | Vegetarian                                                       |
+| 7        | Vegetarian - Extra Bacon                                         |
+| 8        | Meat Lovers                                                      |
+| 9        | Meat Lovers - Exclude Cheese - Extra Bacon, Chicken              |
+| 10       | Meat Lovers                                                      |
+| 10       | Meat Lovers - Exclude BBQ Sauce, Mushrooms - Extra Bacon, Cheese |
+
 ### 5. Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients
 - For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
 ### 6. What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
