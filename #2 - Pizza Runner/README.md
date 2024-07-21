@@ -694,8 +694,58 @@ The first two queries clean and organize the data, separating them by each ingre
 ### 6. What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
 ## D. Pricing and Ratings
 ### 1. If a Meat Lovers pizza costs $12 and Vegetarian costs $10 and there were no charges for changes - how much money has Pizza Runner made so far if there are no delivery fees?
+
+```
+SELECT
+    SUM(CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 12
+    WHEN pn.pizza_name LIKE 'Vegetarian' THEN 10 ELSE 0 END) AS total
+FROM pizza_runner.customer_orders co
+JOIN pizza_runner.pizza_names pn
+    ON co.pizza_id = pn.pizza_id
+JOIN pizza_runner.runner_orders ro
+ON co.order_id = ro.order_id
+WHERE CASE WHEN ro.cancellation LIKE 'null' or ro.cancellation LIKE '' THEN null ELSE ro.cancellation END IS NULL
+```
+Pretty simple query. If an order is 'Meatlovers' it assigns $12 to the total column. If it's 'Vegetarian', it becomes $10. The values of the column are added up to give the total amount made from all orders. A WHERE clause is also used to filter out orders that were not successfully delivered.
+
+| total |
+| ----- |
+| 138   |
+
 ### 2. What if there was an additional $1 charge for any pizza extras?
 - Add cheese is $1 extra
+
+```
+WITH prices AS (
+SELECT
+    SUM(CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 12
+    WHEN pn.pizza_name LIKE 'Vegetarian' THEN 10 ELSE 0 END) AS total
+FROM pizza_runner.customer_orders co
+JOIN pizza_runner.pizza_names pn
+    ON co.pizza_id = pn.pizza_id
+JOIN pizza_runner.runner_orders ro
+ON co.order_id = ro.order_id
+WHERE CASE WHEN ro.cancellation LIKE 'null' or ro.cancellation LIKE '' THEN null ELSE ro.cancellation END IS NULL),
+
+extra_cost AS (
+SELECT
+    UNNEST(STRING_TO_ARRAY(CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END, ',')) AS extras
+FROM pizza_runner.customer_orders co
+JOIN pizza_runner.runner_orders ro
+ON co.order_id = ro.order_id
+WHERE CASE WHEN ro.cancellation LIKE 'null' or ro.cancellation LIKE '' THEN null ELSE ro.cancellation END IS NULL)
+
+SELECT
+    total + COUNT(extras) AS total
+FROM prices, extra_cost
+GROUP BY total
+```
+This uses two CTE tables - the first one is just like the prior question and grabs the total from pizzas delivered. The second one separates all the extras into one column, which is then counted in the main query to get the total amount; since each extra is $1, COUNT works great here.
+
+| total |
+| ----- |
+| 142   |
+
 ### 3. The Pizza Runner team now wants to add an additional ratings system that allows customers to rate their runner, how would you design an additional table for this new dataset - generate a schema for this new table and insert your own data for ratings for each successful customer order between 1 to 5.
 ###  4. Using your newly generated table - can you join all of the information together to form a table which has the following information for successful deliveries?
 - customer_id
