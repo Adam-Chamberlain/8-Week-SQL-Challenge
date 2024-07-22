@@ -28,7 +28,7 @@ This uses the same query as the one above, but instead of counting all rows, it 
 ### 3. How many successful orders were delivered by each runner?
 
 ```
-WITH temp AS (
+WITH clean AS (
 SELECT
     *,
     CASE WHEN cancellation LIKE 'null' or cancellation LIKE '' THEN null ELSE cancellation END as cancellations
@@ -37,7 +37,7 @@ FROM pizza_runner.runner_orders)
 SELECT
     runner_id,
     COUNT(order_id) AS delivered
-FROM temp
+FROM clean
 WHERE cancellations IS NULL
 GROUP BY runner_id
 ```
@@ -99,7 +99,7 @@ For this one, I simply had to count the amount of orders and group it by the cus
 ### 6. What was the maximum number of pizzas delivered in a single order?
 
 ```
-WITH temp AS (
+WITH clean AS (
 SELECT
     c.order_id
 FROM pizza_runner.customer_orders c
@@ -110,7 +110,7 @@ WHERE CASE WHEN r.cancellation LIKE 'null' or r.cancellation LIKE '' THEN null E
 SELECT 
     order_id,
     COUNT(order_id) AS amount
-FROM temp
+FROM clean
 GROUP BY order_id
 ORDER BY amount DESC
 ```
@@ -130,7 +130,7 @@ I first joined the necessary tables and pulled the relevant information with uns
 ### 7. For each customer, how many delivered pizzas had at least 1 change and how many had no changes?
 
 ```
-WITH temp AS (
+WITH clean AS (
 SELECT
     c.customer_id,
     c.pizza_id,
@@ -145,7 +145,7 @@ SELECT
 customer_id,
 SUM(CASE WHEN exclusions IS NOT NULL OR extras IS NOT NULL THEN 1 ELSE 0 END) AS changes,
 SUM(CASE WHEN exclusions IS NULL AND extras IS NULL THEN 1 ELSE 0 END) AS no_changes
-FROM temp
+FROM clean
 GROUP BY customer_id
 ORDER BY customer_id
 ```
@@ -162,7 +162,7 @@ This one was a bit more complicated and required lots of cleaning. Like the `can
 ### 8. How many pizzas were delivered that had both exclusions and extras?
 
 ```
-WITH temp AS (
+WITH clean AS (
 SELECT
     c.customer_id,
     c.pizza_id,
@@ -175,7 +175,7 @@ WHERE CASE WHEN r.cancellation LIKE 'null' or r.cancellation LIKE '' THEN null E
 
 SELECT
     SUM(CASE WHEN exclusions IS NOT NULL AND extras IS NOT NULL THEN 1 ELSE 0 END) AS both
-FROM temp
+FROM clean
 ```
 This one just required a few changes from the last one. Instead of using OR in the CASE statement, it uses AND to check if it meets both criteria. I also removed the extra columns that are not relevant for this question. Although there are actually two orders that have both exclusions and extras, one was cancelled, so it was filtered out in the first query.
 
@@ -207,7 +207,7 @@ For this, the hour of the day is extracted from the order time, and with that, i
 ### 10. What was the volume of orders for each day of the week?
 
 ```
-WITH temp AS (
+WITH clean AS (
 SELECT 
     EXTRACT(isodow FROM order_time) AS day,
     COUNT(order_id) AS amount
@@ -224,7 +224,7 @@ SELECT
     WHEN day = 6 THEN 'Saturday'
     WHEN day = 7 THEN 'Sunday' ELSE null END AS day,
     amount
-FROM temp
+FROM clean
 ```
 Here, "isodow" is extracted from `order_time`, which is the day of the week (1 = Monday, 2 = Tuesday, etc). The first query groups the amount of pizzas ordered per day of the week, and the second one changes the numbers to the actual name of the weekday using a long CASE statement.
 
@@ -259,7 +259,7 @@ I had to use a CASE statement to number each week period. If I used EXTRACT(WEEK
 ### 2. What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pickup the order?
 
 ```
-WITH temp AS (
+WITH clean AS (
 SELECT
   r.runner_id,
   c.order_time,
@@ -271,7 +271,7 @@ ON r.order_id = c.order_id)
 SELECT
   runner_id,
   DATE_PART('minute', AVG(pickup - order_time)) AS average_time
-  FROM temp
+  FROM clean
   GROUP BY runner_id
 ```
 This took a lot of cleaning yet again; the `pickup_time` had "null" text and was not in the timestamp format because of that. I used a CASE statement to convert null text to actual null values and then converted the times to timestamps. This allowed me to subtract the order time from it to get the exact time difference between when the order was placed and when the order was picked up. I used DATE_PART to only pull the amount of minutes rather than including seconds and milliseconds, as the question only asks for minutes.
@@ -285,7 +285,7 @@ This took a lot of cleaning yet again; the `pickup_time` had "null" text and was
 ### 3. Is there any relationship between the number of pizzas and how long the order takes to prepare?
 
 ```
-WITH temp AS (
+WITH clean AS (
 SELECT
   c.order_id,
   c.order_time,
@@ -298,11 +298,11 @@ SELECT
   order_id,
   COUNT(order_id) AS volume,
   DATE_PART('minute', pickup - order_time) AS time
-  FROM temp
+  FROM clean
   GROUP BY order_id, pickup, order_time
   ORDER BY order_id
 ```
-For this one, I used the same subquery to pull relevant cleaned information, the only difference being the order id being pulled instead of the runner id. I then counted the amount of pizzas ordered and grouped it by the order id to get the total number of pizzas ordered per order id. This chart shows a clear trend; most orders with one pizza take about 10 minutes, with the exception of order 8. Orders with two pizzas take longer, with one taking 15 minutes and one taking 21 minutes. Order 4, which had 3 pizzas, took the longest, at 29 minutes.
+For this one, I used the same CTE to pull relevant cleaned information, the only difference being the order id being pulled instead of the runner id. I then counted the amount of pizzas ordered and grouped it by the order id to get the total number of pizzas ordered per order id. This chart shows a clear trend; most orders with one pizza take about 10 minutes, with the exception of order 8. Orders with two pizzas take longer, with one taking 15 minutes and one taking 21 minutes. Order 4, which had 3 pizzas, took the longest, at 29 minutes.
 
 | order_id | volume | time |
 | -------- | ------ | ---- |
@@ -320,7 +320,7 @@ For this one, I used the same subquery to pull relevant cleaned information, the
 ### 4. What was the average distance travelled for each customer?
 
 ```
-WITH temp AS(
+WITH clean AS(
 SELECT
 DISTINCT c.order_id,
 c.customer_id,
@@ -334,11 +334,11 @@ WHERE CASE WHEN r.distance LIKE 'null' THEN null ELSE r.distance END IS NOT NULL
 SELECT
 customer_id,
 AVG(CAST(distance AS DECIMAL)) AS avg_distance
-FROM temp
+FROM clean
 GROUP BY customer_id
 ORDER BY customer_id
 ```
-The `distance` column had inconsistencies with how the data was inputted, so it required lots of cleaning. In the subquery, I removed "km" from all the numbers that included it using TRIM and changed the null text to the actual null value. I then used CAST to convert the numbers to decimals and added up the average for each customer.
+The `distance` column had inconsistencies with how the data was inputted, so it required lots of cleaning. In the CTE, I removed "km" from all the numbers that included it using TRIM and changed the null text to the actual null value. I then used CAST to convert the numbers to decimals and added up the average for each customer.
 
 | customer_id | avg_distance        |
 | ----------- | ------------------- |
@@ -351,7 +351,7 @@ The `distance` column had inconsistencies with how the data was inputted, so it 
 ### 5. What was the difference between the longest and shortest delivery times for all orders?
 
 ```
-WITH temp AS (
+WITH clean AS (
 SELECT
 CAST(CASE WHEN duration LIKE '%minutes' THEN TRIM('minutes' FROM duration)
 WHEN duration LIKE '%mins' THEN TRIM('mins' FROM duration)
@@ -361,7 +361,7 @@ FROM pizza_runner.runner_orders)
 
 SELECT
 MAX(delivery_duration) - MIN(delivery_duration) AS difference
-FROM temp
+FROM clean
 ```
 The `duration` tab needed a lot of cleaning, as it was a mix of just numbers, x mins, x minutes, and x minute. I used a long CASE statement to clean up all inconsistencies, and I used CAST around that to convert them all to integers. I then subtracted the max value from the min value, getting 30 minutes as the difference.
 
@@ -372,7 +372,7 @@ The `duration` tab needed a lot of cleaning, as it was a mix of just numbers, x 
 ### 6. What was the average speed for each runner for each delivery and do you notice any trend for these values?
 
 ```
-WITH temp AS(
+WITH clean AS(
 SELECT
 runner_id,
 CAST(CASE WHEN distance LIKE '%km' THEN TRIM('km' FROM distance)
@@ -386,11 +386,11 @@ FROM pizza_runner.runner_orders)
 SELECT
 runner_id,
 ROUND(distance / duration * 60, 2) AS avg_km_per_hour
-FROM temp
+FROM clean
 WHERE distance IS NOT NULL
 ORDER BY runner_id, avg_km_per_hour DESC
 ```
-The subquery cleaned up the `distance` and `duration` columns, removing inconsistancies and converting them to decimal values. Then, they are calculated into the average KM per hour per order. Runner 1's average fluctuates between 37.5 and 60 KM/h, while runner 2's goes from 35.1 to a whopping 93.6 KM/h.
+The CTE cleaned up the `distance` and `duration` columns, removing inconsistancies and converting them to decimal values. Then, they are calculated into the average KM per hour per order. Runner 1's average fluctuates between 37.5 and 60 KM/h, while runner 2's goes from 35.1 to a whopping 93.6 KM/h.
 
 | runner_id | avg_km_per_hour |
 | --------- | --------------- |
@@ -406,7 +406,7 @@ The subquery cleaned up the `distance` and `duration` columns, removing inconsis
 ### 7. What is the successful delivery percentage for each runner?
 
 ```
-WITH temp AS (
+WITH clean AS (
 SELECT
 runner_id,
 CASE WHEN cancellation LIKE 'null' or cancellation LIKE '' OR cancellation IS NULL THEN 1 ELSE NULL END AS cancellation
@@ -415,11 +415,11 @@ FROM pizza_runner.runner_orders)
 SELECT
 runner_id,
 100 * COUNT(cancellation) / COUNT(*) AS avg
-FROM temp
+FROM clean
 GROUP BY runner_id
 ORDER BY runner_id
 ```
-The subquery basically flips all of the contents of the `cancellation` column, making non-null values null and making null values 1. This allowed me to easily count up the amount of orders that were successfully delivered. I found the average by dividing the number of orders that were not cancelled by the total amount of orders, and then I grouped them per runner.
+The CTE basically flips all of the contents of the `cancellation` column, making non-null values null and making null values 1. This allowed me to easily count up the amount of orders that were successfully delivered. I found the average by dividing the number of orders that were not cancelled by the total amount of orders, and then I grouped them per runner.
 
 | runner_id | avg |
 | --------- | --- |
@@ -431,7 +431,7 @@ The subquery basically flips all of the contents of the `cancellation` column, m
 ### 1. What are the standard ingredients for each pizza?
 
 ```
-WITH temp AS (
+WITH clean AS (
 SELECT
 pn.pizza_name,
 CAST(UNNEST(STRING_TO_ARRAY(pr.toppings, ',')) AS INTEGER) AS topping_id
@@ -440,12 +440,12 @@ JOIN pizza_runner.pizza_recipes pr
 ON pn.pizza_id = pr.pizza_id)
 
 SELECT
-t.pizza_name,
+c.pizza_name,
 pt.topping_name
-FROM temp t
+FROM clean c
 JOIN pizza_runner.pizza_toppings pt
-ON t.topping_id = pt.topping_id
-ORDER BY t.pizza_name, pt.topping_id
+ON c.topping_id = pt.topping_id
+ORDER BY c.pizza_name, pt.topping_id
 ```
 Since the pizza ingredients are all in one column and separated by commas, they needed to be separated. I did so using UNNEST. Using STRING_TO_ARRAY, it found all of the ingredients separated by commas and put them in separate rows. I then converted them to integers so that they could easily be joined with the `pizza_toppings` table in order to easily identify which number corresponds to which ingredient.
 
@@ -469,28 +469,28 @@ Since the pizza ingredients are all in one column and separated by commas, they 
 ### 2. What was the most commonly added extra?
 
 ```
-WITH temp1 AS (
+WITH clean AS (
 SELECT
 order_id,
 CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END AS extras
 FROM pizza_runner.customer_orders),
 
-temp2 AS (
+separate AS (
 SELECT
 order_id,
 CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER) AS topping_id
-FROM temp1)
+FROM clean)
 
 SELECT
 topping_name,
 COUNT(order_id) AS amount
-FROM temp2 t
+FROM separate s
 JOIN pizza_runner.pizza_toppings pt
-ON t.topping_id = pt.topping_id
+ON s.topping_id = pt.topping_id
 GROUP BY topping_name
 ORDER BY amount DESC
 ```
-Since this required lots of cleaning, I used three queries. The first one fixes all the inconsistent null values in the `extras` column. The second one separates the topping ids, since they are in the same column and separated by commas, similar to the previous question. The final query joins it with the pizza toppings table, matches the topping ids with their name, and groups them based on how many times they are counted.
+Since this required lots of cleaning, I used two CTEs. The first one fixes all the inconsistent null values in the `extras` column. The second one separates the topping ids, since they are in the same column and separated by commas, similar to the previous question. The main query joins it with the pizza toppings table, matches the topping ids with their name, and groups them based on how many times they are counted.
 
 | topping_name | amount |
 | ------------ | ------ |
@@ -501,24 +501,24 @@ Since this required lots of cleaning, I used three queries. The first one fixes 
 ### 3. What was the most common exclusion?
 
 ```
-WITH temp1 AS (
+WITH clean AS (
 SELECT
 order_id,
 CASE WHEN exclusions LIKE '' OR exclusions LIKE 'null' THEN null ELSE exclusions END AS exclusions
 FROM pizza_runner.customer_orders),
 
-temp2 AS (
+separate AS (
 SELECT
 order_id,
 CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER) AS topping_id
-FROM temp1)
+FROM clean)
 
 SELECT
 topping_name,
 COUNT(order_id) AS amount
-FROM temp2 t
+FROM separate s
 JOIN pizza_runner.pizza_toppings pt
-ON t.topping_id = pt.topping_id
+ON s.topping_id = pt.topping_id
 GROUP BY topping_name
 ORDER BY amount DESC
 ```
@@ -537,7 +537,7 @@ This uses the exact same queries as the prior question but with the first two qu
 - Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
 
 ```
-WITH temp1 AS (
+WITH clean AS (
 SELECT
 ROW_NUMBER() OVER() AS row,
 order_id,
@@ -550,7 +550,7 @@ temp2 AS (SELECT
 row,
 CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER) AS exclusions,
 CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER) AS extras
-FROM temp1),
+FROM clean),
 
 temp3 AS (SELECT
 row,
@@ -569,21 +569,21 @@ ON t2.extras = pt.topping_id
 GROUP BY row)
 
 SELECT
-t1.order_id,
+c.order_id,
 CONCAT(
   CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 'Meat Lovers' ELSE pn.pizza_name END,
   CASE WHEN t3.exclusions IS NOT NULL THEN ' - Exclude ' ELSE NULL END, t3.exclusions,
   CASE WHEN t4.extras IS NOT NULL THEN ' - Extra ' ELSE NULL END, t4.extras) AS order
-FROM temp1 t1
+FROM clean c
 LEFT JOIN temp3 t3
-ON t1.row = t3.row
+ON c.row = t3.row
 LEFT JOIN temp4 t4
-ON t1.row = t4.row
+ON c.row = t4.row
 JOIN pizza_runner.pizza_names pn
-ON t1.pizza_id = pn.pizza_id
+ON c.pizza_id = pn.pizza_id
 ```
-This took a LOT of subqueries, but it works!
-- temp1 - Cleans data and pulls relevant information. I also added a row number column, which is important for grouping ingredients back together later on.
+This took a LOT of CTE tables, but it works!
+- clean - Cleans data and pulls relevant information. I also added a row number column, which is important for grouping ingredients back together later on.
 - temp2 - Separates all exclusions and extras into separate columns so that they can be properly identified with the `pizza_toppings` table.
 - temp3 - Matches ingredient numbers from the `exclusions` column and groups them back together based on the initial row number in the case where there are multiple exclusions.
 - temp4 - Does the same thing as temp3 but with the `extras` column instead.
@@ -610,7 +610,8 @@ This took a LOT of subqueries, but it works!
 - For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
 
 ```
-WITH temp1 AS (SELECT
+WITH clean AS (
+SELECT
 ROW_NUMBER() OVER() AS row,
 co.order_id,
 co.pizza_id,
@@ -622,59 +623,48 @@ FROM pizza_runner.customer_orders co
   ON co.pizza_id = pr.pizza_id
 ORDER BY order_id),
   
-temp2 AS (SELECT
+organize AS (SELECT
+row,
+c.order_id,
+pn.pizza_name,
+topping_name,
+CASE WHEN topping_id IN (
+  SELECT CAST(UNNEST(STRING_TO_ARRAY(pr.toppings, ',')) AS INTEGER)) THEN 1 ELSE NULL END AS toppings,
+CASE WHEN topping_id IN (
+  SELECT CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER)) THEN 1 ELSE NULL END AS exclusions,
+CASE WHEN topping_id IN (
+  SELECT CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER)) THEN 1 ELSE NULL END AS extras
+FROM
+clean c,
+pizza_runner.pizza_toppings pt,
+pizza_runner.pizza_recipes pr
+JOIN pizza_runner.pizza_names pn ON pr.pizza_id = pn.pizza_id
+WHERE c.pizza_id = pr.pizza_id
+ORDER BY row),
+
+filter AS (SELECT
 row,
 order_id,
-pizza_id,
-CAST(UNNEST(STRING_TO_ARRAY(toppings, ',')) AS INTEGER) AS toppings,
-CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER) AS exclusions,
-CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER) AS extras
-FROM temp1),
-
-temp3 AS (
-SELECT * FROM pizza_runner.pizza_toppings),
-
-temp4 AS (
-SELECT * FROM pizza_runner.pizza_toppings),
-
-temp5 AS (SELECT
-row,
-order_id,
-pizza_id,
-t3.topping_name AS toppings,
-t4.topping_name AS exclusions,
-pt.topping_name AS extras
-FROM temp2 t2
-LEFT JOIN temp3 t3
-ON t2.toppings = t3.topping_id
-LEFT JOIN temp4 t4
-ON t2.exclusions = t4.topping_id
-LEFT JOIN pizza_runner.pizza_toppings pt
-ON t2.extras = pt.topping_id
-ORDER BY row)
+CASE WHEN pizza_name LIKE 'Meatlovers' THEN 'Meat Lovers' ELSE pizza_name END AS pizza_name,
+topping_name,
+toppings,
+extras,
+exclusions,
+CASE WHEN toppings = 1 AND extras = 1 THEN CONCAT('2x',topping_name)
+WHEN exclusions = 1 THEN NULL
+WHEN toppings = 1 OR extras = 1 THEN topping_name ELSE NULL END AS topping
+FROM organize)
 
 SELECT
-t5.order_id,
-CONCAT(CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 'Meat Lovers' ELSE pn.pizza_name END,': ',STRING_AGG(CASE WHEN t5.toppings IN
-(SELECT t5.extras from temp5 t5 WHERE t5.row = t1.row)
-THEN CONCAT('2x',t5.toppings)
-WHEN t5.toppings IN
-(SELECT t5.exclusions from temp5 t5 WHERE t5.row = t1.row)
-THEN null
-ELSE t5.toppings END,', ' ORDER BY t5.toppings ASC)) AS toppings
-FROM temp5 t5
-JOIN temp1 t1
-ON t5.row = t1.row
-JOIN pizza_runner.pizza_names pn
-ON t5.pizza_id = pn.pizza_id
-GROUP BY t5.row, t5.order_id, t5.pizza_id, pn.pizza_name
+order_id,
+CONCAT(pizza_name, ': ', STRING_AGG(topping, ', ' ORDER BY topping ASC)) AS order
+FROM filter
+GROUP BY pizza_name, order_id, row
 ORDER BY order_id
 ```
-Yes, that is FIVE CTEs. There is one bug in this code that I have yet to fix: Toppings that were added but not already included are not included on the topping list. One Vegetarian pizza had Bacon added to it, but it does not show properly. I will return to this query at some point to fix it, but I wanted to move on to the next ones.
+This one was quite complicated, and I did use some outside help for the subqueries used in the `organize` CTE on this question and the next question. The first CTE cleans the data. The `organize` CTE lists out every pizza ordered along with the right type of pizza, and each pizza has a row for each ingredient, whether it's included or not. The subqueries mark whether each topping is included as a standard topping, exclusion, or extra. If they are, they are marked with a 1. The `filter` CTE filters out toppings based on where 1 values are included; if they are in extras and toppings, then it adds '2x'. Finally, they are brought together with STRING_AGG function separating each ingredient by commas.
 
-The first two queries clean and organize the data, separating them by each ingredient. The third and fourth are duplicates of the `pizza_toppings` table, which allow me to match the toppings, exclusions, and extras columns with the proper ingredients all at the same time in the fifth table. Lastly, it all comes together with a very long CONCAT function. If an existing ingredient is found again in the `extras` column, it adds "2x", and if it's found in the `exclusions` column, it is removed.
-
-| order_id | toppings                                                                             |
+| order_id | order                                                                                |
 | -------- | ------------------------------------------------------------------------------------ |
 | 1        | Meat Lovers: BBQ Sauce, Bacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami   |
 | 2        | Meat Lovers: BBQ Sauce, Bacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami   |
@@ -683,15 +673,72 @@ The first two queries clean and organize the data, separating them by each ingre
 | 4        | Meat Lovers: BBQ Sauce, Bacon, Beef, Chicken, Mushrooms, Pepperoni, Salami           |
 | 4        | Meat Lovers: BBQ Sauce, Bacon, Beef, Chicken, Mushrooms, Pepperoni, Salami           |
 | 4        | Vegetarian: Mushrooms, Onions, Peppers, Tomato Sauce, Tomatoes                       |
-| 5        | Meat Lovers: BBQ Sauce, 2xBacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami |
+| 5        | Meat Lovers: 2xBacon, BBQ Sauce, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami |
 | 6        | Vegetarian: Cheese, Mushrooms, Onions, Peppers, Tomato Sauce, Tomatoes               |
-| 7        | Vegetarian: Cheese, Mushrooms, Onions, Peppers, Tomato Sauce, Tomatoes               |
+| 7        | Vegetarian: Bacon, Cheese, Mushrooms, Onions, Peppers, Tomato Sauce, Tomatoes        |
 | 8        | Meat Lovers: BBQ Sauce, Bacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami   |
-| 9        | Meat Lovers: BBQ Sauce, 2xBacon, Beef, 2xChicken, Mushrooms, Pepperoni, Salami       |
-| 10       | Meat Lovers: 2xBacon, Beef, 2xCheese, Chicken, Pepperoni, Salami                     |
+| 9        | Meat Lovers: 2xBacon, 2xChicken, BBQ Sauce, Beef, Mushrooms, Pepperoni, Salami       |
+| 10       | Meat Lovers: 2xBacon, 2xCheese, Beef, Chicken, Pepperoni, Salami                     |
 | 10       | Meat Lovers: BBQ Sauce, Bacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami   |
 
 ### 6. What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
+
+```
+WITH clean AS (SELECT
+ROW_NUMBER() OVER() AS row,
+co.order_id,
+co.pizza_id,
+CASE WHEN exclusions LIKE '' OR exclusions LIKE 'null' THEN null ELSE exclusions END AS exclusions,
+CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END AS extras,
+pr.toppings
+FROM pizza_runner.customer_orders co
+  JOIN pizza_runner.pizza_recipes pr
+  ON co.pizza_id = pr.pizza_id
+JOIN pizza_runner.runner_orders ro
+  ON co.order_id = ro.order_id
+WHERE CASE WHEN ro.cancel lation LIKE 'null' or ro.cancellation LIKE '' THEN null ELSE ro.cancellation END IS NULL
+ORDER BY order_id),
+
+data AS (
+SELECT
+row,
+order_id,
+topping_name,
+CASE WHEN topping_id IN (
+  SELECT CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER)) THEN 0
+ELSE CASE WHEN topping_id IN (
+  SELECT CAST(UNNEST(STRING_TO_ARRAY(toppings, ',')) AS INTEGER)) THEN COUNT(topping_name)
+ELSE 0 END END AS topping_count,
+CASE WHEN topping_id IN (
+  SELECT CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER)) THEN COUNT(topping_name)
+ELSE 0 END AS extra_count
+FROM clean c, pizza_runner.pizza_toppings pt
+GROUP BY c.row, pt.topping_name, c.exclusions, pt.topping_id, c.toppings, c.extras, c.order_id)
+
+SELECT
+topping_name,
+SUM(topping_count) + SUM(extra_count) AS total
+FROM data
+GROUP BY topping_name
+ORDER BY total DESC
+```
+This was pretty tricky and I honestly had to get some outside help for the subqueries in the `data` CTE, but I was able to figure it out. As always, the `clean` CTE cleans and joins all the data. The `data` CTE is where it all comes together. Basically, each pizza has a row for each ingredient. For example, pizza '1' has a row for Bacon, BBQ Sauce, Cheese, and so on. The CASE statements with subqueries search for if the topping id exists in the list of exclusions, extras, or standard pizza toppings for each pizza. If it does, it counts them and adds it to a column, with the exception of `exclusions`, where it removes the value instead. With that, they are then summed and grouped by topping name to show the total amount of each topping used.
+
+| topping_name | total |
+| ------------ | ----- |
+| Bacon        | 12    |
+| Mushrooms    | 11    |
+| Cheese       | 10    |
+| Pepperoni    | 9     |
+| Chicken      | 9     |
+| Salami       | 9     |
+| Beef         | 9     |
+| BBQ Sauce    | 8     |
+| Tomato Sauce | 3     |
+| Onions       | 3     |
+| Tomatoes     | 3     |
+| Peppers      | 3     |
+
 ## D. Pricing and Ratings
 ### 1. If a Meat Lovers pizza costs $12 and Vegetarian costs $10 and there were no charges for changes - how much money has Pizza Runner made so far if there are no delivery fees?
 
@@ -747,6 +794,38 @@ This uses two CTE tables - the first one is just like the prior question and gra
 | 142   |
 
 ### 3. The Pizza Runner team now wants to add an additional ratings system that allows customers to rate their runner, how would you design an additional table for this new dataset - generate a schema for this new table and insert your own data for ratings for each successful customer order between 1 to 5.
+
+```
+DROP TABLE IF EXISTS ratings;
+CREATE TABLE ratings (
+  "order_id" INTEGER,
+  "rating" INTEGER
+);
+INSERT INTO ratings
+  ("order_id", "rating")
+VALUES
+  (1, 5),
+  (2, 5),
+  (3, 3),
+  (4, 4),
+  (5, 4),
+  (7, 5),
+  (8, 2),
+  (10, 3);
+```
+To do this, I simply created the `ratings` table using `order_id` and `rating` as the columns. `order_id` would match with other tables, allowing them to easily be joined. I then inserted values for each successful order (6 and 9 were cancelled) and added random ratings.
+
+| order_id | rating |
+| -------- | ------ |
+| 1        | 5      |
+| 2        | 5      |
+| 3        | 3      |
+| 4        | 4      |
+| 5        | 4      |
+| 7        | 5      |
+| 8        | 2      |
+| 10       | 3      |
+
 ###  4. Using your newly generated table - can you join all of the information together to form a table which has the following information for successful deliveries?
 - customer_id
 - order_id
@@ -758,6 +837,92 @@ This uses two CTE tables - the first one is just like the prior question and gra
 - Delivery duration
 - Average speed
 - Total number of pizzas
+
+```
+WITH clean AS (
+SELECT
+order_id,
+runner_id,
+CASE WHEN pickup_time LIKE 'null' THEN null ELSE CAST(pickup_time AS TIMESTAMP) END AS pickup_time,
+CAST(CASE WHEN distance LIKE '%km' THEN TRIM('km' FROM distance)
+  WHEN distance LIKE 'null' THEN NULL ELSE distance END AS DECIMAL) AS distance,
+CAST(CASE WHEN duration LIKE '%minutes' THEN TRIM('minutes' FROM duration)
+WHEN duration LIKE '%mins' THEN TRIM('mins' FROM duration)
+WHEN duration LIKE '%minute' THEN TRIM('minute' FROM duration)
+WHEN duration LIKE 'null' THEN NULL ELSE duration END AS DECIMAL) AS duration
+FROM pizza_runner.runner_orders)
+  
+SELECT 
+co.customer_id,
+co.order_id,
+c.runner_id,
+r.rating,
+co.order_time,
+c.pickup_time,
+DATE_PART('minute', c.pickup_time - co.order_time) AS time_from_order_and_pickup,
+c.duration AS delivery_duration,
+ROUND(c.distance / c.duration * 60, 2) AS avg_speed,
+COUNT(co.customer_id) AS pizza_count
+FROM pizza_runner.customer_orders co
+LEFT JOIN pizza_runner.ratings r
+ON co.order_id = r.order_id
+LEFT JOIN clean c
+ON co.order_id = c.order_id
+GROUP BY co.order_id, customer_id, order_time, r.rating, c.runner_id, c.pickup_time, c.duration, c.distance
+ORDER BY co.order_id
+```
+The CTE cleans the `runner_orders` table, and the rest of the information is pulled from other tables with the necessary information. Many of these formulas were able to be taken from prior questions.
+
+| customer_id | order_id | runner_id | rating | order_time               | pickup_time              | time_from_order_and_pickup | delivery_duration | avg_speed | pizza_count |
+| ----------- | -------- | --------- | ------ | ------------------------ | ------------------------ | -------------------------- | ----------------- | --------- | ----------- |
+| 101         | 1        | 1         | 5      | 2020-01-01T18:05:02.000Z | 2020-01-01T18:15:34.000Z | 10                         | 32                | 37.50     | 1           |
+| 101         | 2        | 1         | 5      | 2020-01-01T19:00:52.000Z | 2020-01-01T19:10:54.000Z | 10                         | 27                | 44.44     | 1           |
+| 102         | 3        | 1         | 3      | 2020-01-02T23:51:23.000Z | 2020-01-03T00:12:37.000Z | 21                         | 20                | 40.20     | 2           |
+| 103         | 4        | 2         | 4      | 2020-01-04T13:23:46.000Z | 2020-01-04T13:53:03.000Z | 29                         | 40                | 35.10     | 3           |
+| 104         | 5        | 3         | 4      | 2020-01-08T21:00:29.000Z | 2020-01-08T21:10:57.000Z | 10                         | 15                | 40.00     | 1           |
+| 101         | 6        | 3         |        | 2020-01-08T21:03:13.000Z |                          |                            |                   |           | 1           |
+| 105         | 7        | 2         | 5      | 2020-01-08T21:20:29.000Z | 2020-01-08T21:30:45.000Z | 10                         | 25                | 60.00     | 1           |
+| 102         | 8        | 2         | 2      | 2020-01-09T23:54:33.000Z | 2020-01-10T00:15:02.000Z | 20                         | 15                | 93.60     | 1           |
+| 103         | 9        | 2         |        | 2020-01-10T11:22:59.000Z |                          |                            |                   |           | 1           |
+| 104         | 10       | 1         | 3      | 2020-01-11T18:34:49.000Z | 2020-01-11T18:50:20.000Z | 15                         | 10                | 60.00     | 2           |
+
 ### 5. If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
+
+```
+WITH pizza_price AS (SELECT
+    SUM(CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 12
+    WHEN pn.pizza_name LIKE 'Vegetarian' THEN 10 ELSE 0 END) AS total
+FROM pizza_runner.customer_orders co
+JOIN pizza_runner.pizza_names pn
+    ON co.pizza_id = pn.pizza_id
+JOIN pizza_runner.runner_orders ro
+ON co.order_id = ro.order_id
+WHERE CASE WHEN ro.cancellation LIKE 'null' or ro.cancellation LIKE '' THEN null ELSE ro.cancellation END IS NULL)
+
+SELECT
+total - SUM(CAST(CASE WHEN distance LIKE '%km' THEN TRIM('km' FROM distance)
+  WHEN distance LIKE 'null' THEN NULL ELSE distance END AS DECIMAL)) * 0.3 AS balance
+FROM pizza_runner.runner_orders, pizza_price
+GROUP BY total
+```
+The CTE uses the same query as question 1 to find the amount made from successfully delivered pizzas. It then finds the total amount of kilometers travelled, multiplies it by 0.3 (since it's $0.30 per km) and subtracts that total from the pizza sales total.
+
+| balance |
+| ------- |
+| 94.44   |
+
 ## E. Bonus Questions
 ### If Danny wants to expand his range of pizzas - how would this impact the existing data design? Write an INSERT statement to demonstrate what would happen if a new Supreme pizza with all the toppings was added to the Pizza Runner menu?
+
+```
+INSERT INTO pizza_runner.pizza_names
+  ("pizza_id", "pizza_name")
+VALUES
+  (3, 'Supreme');
+
+INSERT INTO pizza_runner.pizza_recipes
+  ("pizza_id", "toppings")
+VALUES
+  (3, '1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12');
+```
+Rows would be inserted into the `pizza_names` and `pizza_recipes` tables to account for the new type of pizza. Nothing else would need to be modified.
