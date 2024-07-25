@@ -9,14 +9,14 @@ Since there were many more rows of data in this case study, I decided to use MyS
 
 ```
 SELECT
-s.customer_id,
-s.start_date,
-p.plan_id,
-p.plan_name,
-p.price
-from subscriptions s
+  s.customer_id,
+  s.start_date,
+  p.plan_id,
+  p.plan_name,
+  p.price
+FROM subscriptions s
 JOIN plans p
-ON s.plan_id = p.plan_id
+  ON s.plan_id = p.plan_id
 WHERE s.customer_id IN(1, 2, 11, 13, 15, 16, 18, 19)
 ```
 The samples shown on the case study website are customers with the IDs 1, 2, 11, 13, 15, 16, 18, and 19. I joined the two tables to identify plan names and prices and then filtered out data to only show these 8 customers.
@@ -57,7 +57,7 @@ The samples shown on the case study website are customers with the IDs 1, 2, 11,
 ### 1. How many customers has Foodie-Fi ever had?
 ```
 SELECT
-COUNT(DISTINCT customer_id) AS count
+  COUNT(DISTINCT customer_id) AS count
 FROM subscriptions
 ```
 Pretty straightforward; for this, all that is needed is to count the number of distinct customer IDs.
@@ -70,12 +70,12 @@ Pretty straightforward; for this, all that is needed is to count the number of d
 
 ```
 SELECT
-MONTH(start_date) AS month,
-MONTHNAME(start_date) AS month_name,
-COUNT(CASE WHEN plan_name = 'trial' THEN 1 ELSE NULL END) AS trial
+  MONTH(start_date) AS month,
+  MONTHNAME(start_date) AS month_name,
+  COUNT(CASE WHEN plan_name = 'trial' THEN 1 ELSE NULL END) AS trial
 FROM subscriptions s
 JOIN plans p
-ON s.plan_id = p.plan_id
+  ON s.plan_id = p.plan_id
 GROUP BY month, month_name
 ORDER BY month
 ```
@@ -100,12 +100,12 @@ Basically, I used a CASE statement to count instances where there was a free tri
 
 ```
 SELECT
-s.plan_id,
-plan_name,
-COUNT(customer_id) AS amount
+  s.plan_id,
+  plan_name,
+  COUNT(customer_id) AS amount
 FROM subscriptions s
 JOIN plans p
-ON s.plan_id = p.plan_id
+  ON s.plan_id = p.plan_id
 WHERE YEAR(start_date) = 2021
 GROUP BY plan_name, s.plan_id
 ORDER BY s.plan_id
@@ -123,21 +123,79 @@ This query counts the amount of plans that are signed up for in the year 2021, s
 
 ```
 SELECT
-ROUND((SELECT
-COUNT(DISTINCT customer_id) AS churn
-FROM subscriptions
-WHERE plan_id = 4)
-/ COUNT(DISTINCT customer_id),1) AS percent_churned
+    (SELECT
+      COUNT(DISTINCT customer_id)
+    FROM subscriptions
+    WHERE plan_id = 4) AS churn,
+ROUND(
+    (SELECT
+      COUNT(DISTINCT customer_id)
+    FROM subscriptions
+    WHERE plan_id = 4)
+  / COUNT(DISTINCT customer_id) * 100, 1) AS percent
 FROM subscriptions
 ```
-This uses a subquery to find the exact number of customers that have churned, and it then divides that number by the total number of customers.
+This uses subqueries to find the exact number of customers that have churned, and it then divides that number by the total number of customers to get the percentage.
 
-|percent_churned|
-|---|
-|0.3|
+|churned|percent|
+|---|---|
+|307|0.3|
 
 ### 5. How many customers have churned straight after their initial free trial - what percentage is this rounded to the nearest whole number?
+
+```
+WITH ranked AS (SELECT 
+  customer_id, 
+  plan_id, 
+  ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY start_date) AS number
+FROM subscriptions)
+    
+SELECT
+  COUNT(CASE WHEN number = 2 AND plan_id = 4 THEN 1 ELSE NULL END) AS churn_count,
+  ROUND(COUNT(CASE WHEN number = 2 AND plan_id = 4 THEN 1 ELSE NULL END) / COUNT(DISTINCT customer_id) * 100, 0) AS percentage
+FROM ranked
+```
+This uses a CTE to first put numbers next to each customer's plan purchase. The PARTITION BY makes it start counting again every time a new customer shows up; the first time they appear, it counts 1, and the second time, it counts 2, etc. Every single customer starts with a free trial, which is 1, so if they churn immediately after, the row will be 2.
+
+With this, it counts the rows where the ranking is equal to 2 and the plan ID is equal to 4, which is the ID for churn.
+
+|churned|percent|
+|---|---|
+|92|9|
+
 ### 6. What is the number and percentage of customer plans after their initial free trial?
+
+```
+WITH ranked AS (SELECT 
+    customer_id, 
+    s.plan_id,
+    plan_name,
+	  ROW_NUMBER() OVER (
+      PARTITION BY customer_id 
+      ORDER BY start_date) AS number
+  FROM subscriptions s
+  JOIN plans p
+  ON s.plan_id = p.plan_id)
+    
+SELECT
+plan_id,
+plan_name,
+COUNT(number) AS count,
+ROUND(COUNT(number) / (SELECT COUNT(DISTINCT customer_id) FROM ranked) * 100, 0) AS percentage
+FROM ranked
+WHERE number = 2
+GROUP BY plan_name, plan_id
+ORDER BY plan_id
+```
+This uses a similar CTE as the last question to pull relevant info and add rankings to each customer. Again, since everyone starts with a free trial, the values with the number 2 are key here. 
+
+|plan_id|plan_name|churned|percent|
+|---|---|---|---|
+|1|basic monthly|546|55|
+|2|pro monthly|546|33|
+|3|pro annual|546|4|
+|4|churn|92|9|
+
 ### 7. What is the customer count and percentage breakdown of all 5 plan_name values at 2020-12-31?
 ### 8. How many customers have upgraded to an annual plan in 2020?
 ### 9. How many days on average does it take for a customer to an annual plan from the day they join Foodie-Fi?
