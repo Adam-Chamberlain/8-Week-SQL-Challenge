@@ -197,8 +197,82 @@ This uses a similar CTE as the last question to pull relevant info and add ranki
 |4|churn|92|9|
 
 ### 7. What is the customer count and percentage breakdown of all 5 plan_name values at 2020-12-31?
+
+```
+WITH ranked AS (SELECT 
+    customer_id, 
+    s.plan_id,
+    plan_name,
+	  ROW_NUMBER() OVER (
+      PARTITION BY customer_id 
+      ORDER BY start_date DESC) AS number
+  FROM subscriptions s
+  JOIN plans p
+  ON s.plan_id = p.plan_id
+  WHERE YEAR(start_date) < 2021)
+    
+SELECT
+plan_id,
+plan_name,
+COUNT(number) AS count,
+ROUND(COUNT(number) / (SELECT COUNT(DISTINCT customer_id) FROM ranked) * 100, 0) AS percentage
+FROM ranked
+WHERE number = 1
+GROUP BY plan_name, plan_id
+ORDER BY plan_id
+```
+This only needed a few modifications from the previous query. First, the ranking was ordered in descending order instead to mark the most recent subscription per customer as 1. I also added a filter to only include subscriptions from before 2021.
+
+|plan_id|plan_name|churned|percent|
+|---|---|---|---|
+|0|trial|19|2|
+|1|basic monthly|224|22|
+|2|pro monthly|326|33|
+|3|pro annual|195|20|
+|4|churn|236|24|
+
 ### 8. How many customers have upgraded to an annual plan in 2020?
+
+```
+SELECT
+COUNT(customer_id) AS count
+FROM subscriptions
+WHERE plan_id = 3 AND YEAR(start_date) = 2020
+```
+
+|count|
+|-----|
+|195 |
+
 ### 9. How many days on average does it take for a customer to an annual plan from the day they join Foodie-Fi?
+
+```
+WITH annual AS (SELECT
+customer_id,
+plan_id,
+start_date
+FROM subscriptions
+WHERE plan_id = 3),
+
+trial AS (SELECT
+customer_id,
+plan_id,
+start_date
+FROM subscriptions
+WHERE plan_id = 0)
+
+SELECT
+ROUND(AVG(DATEDIFF(a.start_date, t.start_date)), 0) AS average
+FROM annual a
+JOIN trial t
+ON a.customer_id = t.customer_id
+```
+This uses two CTEs: one to only pull annual subscriptions, and one to pull trial subscriptions. They are then JOINed, the difference between the two signup dates are found, and the average is found of those differences.
+
+|average|
+|-----|
+|105 |
+
 ### 10. Can you further breakdown this average value into 30 day periods (i.e. 0-30 days, 31-60 days etc)
 ### 11. How many customers downgraded from a pro monthly to a basic monthly plan in 2020?
 
