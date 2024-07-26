@@ -178,10 +178,10 @@ WITH ranked AS (SELECT
   ON s.plan_id = p.plan_id)
     
 SELECT
-plan_id,
-plan_name,
-COUNT(number) AS count,
-ROUND(COUNT(number) / (SELECT COUNT(DISTINCT customer_id) FROM ranked) * 100, 0) AS percentage
+  plan_id,
+  plan_name,
+  COUNT(number) AS count,
+  ROUND(COUNT(number) / (SELECT COUNT(DISTINCT customer_id) FROM ranked) * 100, 0) AS percentage
 FROM ranked
 WHERE number = 2
 GROUP BY plan_name, plan_id
@@ -212,10 +212,10 @@ WITH ranked AS (SELECT
   WHERE YEAR(start_date) < 2021)
     
 SELECT
-plan_id,
-plan_name,
-COUNT(number) AS count,
-ROUND(COUNT(number) / (SELECT COUNT(DISTINCT customer_id) FROM ranked) * 100, 0) AS percentage
+  plan_id,
+  plan_name,
+  COUNT(number) AS count,
+  ROUND(COUNT(number) / (SELECT COUNT(DISTINCT customer_id) FROM ranked) * 100, 0) AS percentage
 FROM ranked
 WHERE number = 1
 GROUP BY plan_name, plan_id
@@ -235,7 +235,7 @@ This only needed a few modifications from the previous query. First, the ranking
 
 ```
 SELECT
-COUNT(customer_id) AS count
+  COUNT(customer_id) AS count
 FROM subscriptions
 WHERE plan_id = 3 AND YEAR(start_date) = 2020
 ```
@@ -244,25 +244,25 @@ WHERE plan_id = 3 AND YEAR(start_date) = 2020
 |-----|
 |195 |
 
-### 9. How many days on average does it take for a customer to an annual plan from the day they join Foodie-Fi?
+### 9. How many days on average does it take for a customer to upgrade to an annual plan from the day they join Foodie-Fi?
 
 ```
 WITH annual AS (SELECT
-customer_id,
-plan_id,
-start_date
+  customer_id,
+  plan_id,
+  start_date
 FROM subscriptions
 WHERE plan_id = 3),
 
 trial AS (SELECT
-customer_id,
-plan_id,
-start_date
+  customer_id,
+  plan_id,
+  start_date
 FROM subscriptions
 WHERE plan_id = 0)
 
 SELECT
-ROUND(AVG(DATEDIFF(a.start_date, t.start_date)), 0) AS average
+  ROUND(AVG(DATEDIFF(a.start_date, t.start_date)), 0) AS average
 FROM annual a
 JOIN trial t
 ON a.customer_id = t.customer_id
@@ -274,7 +274,102 @@ This uses two CTEs: one to only pull annual subscriptions, and one to pull trial
 |105 |
 
 ### 10. Can you further breakdown this average value into 30 day periods (i.e. 0-30 days, 31-60 days etc)
+
+I'm honestly not too sure what this question is exactly asking, but I will assume that it is asking for how many customers fall into each category.
+
+```
+WITH annual AS (SELECT
+  customer_id,
+  plan_id,
+  start_date
+FROM subscriptions
+WHERE plan_id = 3),
+
+trial AS (SELECT
+  customer_id,
+  plan_id,
+  start_date
+FROM subscriptions
+WHERE plan_id = 0)
+
+SELECT
+  CASE WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 0 AND 30 THEN 1
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 31 AND 60 THEN 2
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 61 AND 90 THEN 3
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 91 AND 120 THEN 4
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 121 AND 150 THEN 5
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 151 AND 180 THEN 6
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 181 AND 210 THEN 7
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 211 AND 240 THEN 8
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 241 AND 270 THEN 9
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 271 AND 300 THEN 10
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 301 AND 330 THEN 11
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 331 AND 360 THEN 12
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 361 AND 390 THEN 13
+  ELSE NULL END AS num,
+  CASE WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 0 AND 30 THEN '0-30 days'
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 31 AND 60 THEN '31-60 days'
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 61 AND 90 THEN '61-90 days'
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 91 AND 120 THEN '91-120 days'
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 121 AND 150 THEN '121-150 days'
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 151 AND 180 THEN '151-180 days'
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 181 AND 210 THEN '181-210 days'
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 211 AND 240 THEN '211-240 days'
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 241 AND 270 THEN '241-270 days'
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 271 AND 300 THEN '271-300 days'
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 301 AND 330 THEN '301-330 days'
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 331 AND 360 THEN '331-360 days'
+    WHEN DATEDIFF(a.start_date, t.start_date) BETWEEN 361 AND 390 THEN '361-390 days'
+ ELSE NULL END AS amount,
+  COUNT(DATEDIFF(a.start_date, t.start_date)) AS upgrade_time
+FROM annual a
+JOIN trial t
+  ON a.customer_id = t.customer_id
+GROUP BY amount, num
+ORDER BY num
+```
+Using the same two CTEs, I used CASE statements to put different values depending on how long the difference was between each customer's first trial and their purchase of an annual plan. It is duplicated for sorting purposes; although it's a bit messy, it seemed like the easiest way to effectively sort the data.
+
+|num|amount      |upgrade_time|
+|---|------------|------------|
+|1  |0-30 days   |49          |
+|2  |31-60 days  |24          |
+|3  |61-90 days  |34          |
+|4  |91-120 days |35          |
+|5  |121-150 days|42          |
+|6  |151-180 days|36          |
+|7  |181-210 days|26          |
+|8  |211-240 days|4           |
+|9  |241-270 days|5           |
+|10 |271-300 days|1           |
+|11 |301-330 days|1           |
+|12 |331-360 days|1           |
+
 ### 11. How many customers downgraded from a pro monthly to a basic monthly plan in 2020?
+
+```
+WITH pro AS (SELECT
+customer_id,
+plan_id,
+start_date
+FROM subscriptions
+WHERE plan_id = 2 AND YEAR(start_date) = 2020),
+
+basic AS (SELECT
+customer_id,
+plan_id,
+start_date
+FROM subscriptions
+WHERE plan_id = 1 AND YEAR(start_date) = 2020)
+
+SELECT
+COUNT(DATEDIFF(p.start_date, b.start_date)) AS amount
+FROM pro p
+JOIN basic b
+ON p.customer_id = b.customer_id
+WHERE b.start_date > p.start_date
+```
+Using similar CTE tables to instead pull instances with pro monthly and basic montly plan purchases, I had it count the amount of instances where customers specifically downgraded from pro monthly to basic monthly, which was actually none.
 
 ## C. Challenge Payment Question
 ### The Foodie-Fi team wants you to create a new payments table for the year 2020 that includes amounts paid by each customer in the subscriptions table with the following requirements:
