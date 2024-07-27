@@ -380,7 +380,26 @@ Using similar CTE tables to instead pull instances with pro monthly and basic mo
 
 ## D. Outside The Box Questions
 ### 1. How would you calculate the rate of growth for Foodie-Fi?
+
+There are a few ways this can be done. The table in question 2 shows how many new customers use the product for the first time throughout the year. But that doesn't paint the whole picture; customers are only new once, and many subscribe long-term, so it can be better to look at how much revenue is brought in on a monthly or yearly basis as well as how many active customers there are each month.
+
 ### 2. What key metrics would you recommend Foodie-Fi management to track over time to assess performance of their overall business?
+
+Like mentioned before, tracking monthly and annual revenue is key to see if the company is actually growing or not. It is also important to track how many customers they have each month as well as how many new customers join and how many churn. This can give a good idea of whether they are gaining more customers than they are losing, or vise versa.
+
 ### 3. What are some key customer journeys or experiences that you would analyse further to improve customer retention?
+
+It would probably be best to look at two different points: what customers do after the free trial ends, and what causes customers to churn. The reasonings that people purchase subscriptions after the free trial can likely be found with data, but not the data that is supplied. Demographics, location and wealth likely drive a consumer's decision as well as what shows they watched during the trial. The same data points could be used to see why people churn, but it is also worth looking at if new content is keeping people on the platform.
+
 ### 4. If the Foodie-Fi team were to create an exit survey shown to customers who wish to cancel their subscription, what questions would you include in the survey?
+
+- What caused you to make the decision to cancel your subscription?
+This would give the company an idea of why people cancelled, whether it be money related, issues with the service, lack of new content, or something else.
+- Did you have any issues using the service?
+It's important for companies to keep their consumers happy and satisfied so that they continue using the product. This can give the company an idea of what they need to improve on.
+- What other streaming services do you use?
+This can give the company an idea of their main competition, especially if they are taking consumers away from them. If one is identified, they can do in-depth research into the company to see how they can more effectively compete.
+
 ### 5. What business levers could the Foodie-Fi team use to reduce the customer churn rate? How would you validate the effectiveness of your ideas?
+
+It'd be important to see why customers decide to churn, especially ones that are long-term customers and not ones that churn immediately after the free trial ends. Lots of research could be conducted to see what shows these users watched as well as how frequently they used the service. As mentioned before, demographics, wealth, and location likely play a role in what causes customers to subscribe, so there could be more targeted marketing towards the demographics that are most likely to use the product.
