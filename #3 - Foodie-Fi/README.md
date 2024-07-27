@@ -394,10 +394,13 @@ It would probably be best to look at two different points: what customers do aft
 ### 4. If the Foodie-Fi team were to create an exit survey shown to customers who wish to cancel their subscription, what questions would you include in the survey?
 
 - What caused you to make the decision to cancel your subscription?
+
 This would give the company an idea of why people cancelled, whether it be money related, issues with the service, lack of new content, or something else.
 - Did you have any issues using the service?
+
 It's important for companies to keep their consumers happy and satisfied so that they continue using the product. This can give the company an idea of what they need to improve on.
 - What other streaming services do you use?
+
 This can give the company an idea of their main competition, especially if they are taking consumers away from them. If one is identified, they can do in-depth research into the company to see how they can more effectively compete.
 
 ### 5. What business levers could the Foodie-Fi team use to reduce the customer churn rate? How would you validate the effectiveness of your ideas?
