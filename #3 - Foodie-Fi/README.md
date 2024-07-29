@@ -4,6 +4,9 @@ In this case study, a streaming service based around cooking shows is wanting to
 
 Since there were many more rows of data in this case study, I decided to use MySQL instead of the DB Fiddle database that was provided. 
 
+### Entity Relationship Diagram
+![129744449-37b3229b-80b2-4cce-b8e0-707d7f48dcec](https://github.com/user-attachments/assets/4403d92f-7759-4931-846a-ccaf9eb63d85)
+
 ## A. Customer Journey
 ### Based off the 8 sample customers provided in the sample from the subscriptions table, write a brief description about each customer’s onboarding journey. Try to keep it as short as possible - you may also want to run some sort of join to make your explanations a bit easier!
 
