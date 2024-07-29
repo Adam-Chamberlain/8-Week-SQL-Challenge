@@ -1,6 +1,6 @@
-https://8weeksqlchallenge.com/case-study-3/
+# [Case Study #3: Foodie-Fi](https://8weeksqlchallenge.com/case-study-3/)
 
-In this case study, a streaming service based around cooking shows is wanting to use collected data to answer important business questions to ensure future growth.
+In this case study, a streaming service based around cooking shows is wanting to use collected data to answer important business questions to ensure future growth. It uses two tables: `plans`, which lists the type of purchasable plans and their price, and `subscriptions`, which lists each customer, when they bought or upgraded a plan, and on what date.
 
 Since there were many more rows of data in this case study, I decided to use MySQL instead of the DB Fiddle database that was provided. 
 
