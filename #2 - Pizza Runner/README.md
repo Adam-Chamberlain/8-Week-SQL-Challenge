@@ -1,9 +1,16 @@
+# [Case Study #2: Pizza Runner](https://8weeksqlchallenge.com/case-study-2/)
+
+In this case study, a pizza delivery company wants to find information about specific areas of their business using gathered data. Unlike the previous case study, this one is broken up into different categories: Pizza Metrics, Runner & Customer Experience, Ingredient Optimization, and Pricing & Ratings. This company also uses six total tables, which have inconsistent datapoints, meaning it requires some cleaning before use. (For example, some NULL values are the text 'null' or simply a space rather than the actual NULL value)
+
+### Entity Relationship Diagram
+![242152356-78099a4e-4d0e-421f-a560-b72e4321f530](https://github.com/user-attachments/assets/7f62f922-0ee1-47b8-a652-8cec4e5feafc)
+
 ## A. Pizza Metrics
 ### 1. How many pizzas were ordered?
 
 ```
 SELECT
-    COUNT(*) AS orders
+  COUNT(*) AS orders
 FROM pizza_runner.customer_orders;
 ```
 The first question is pretty simple; I just count the amount of orders that took place on the `customer_orders` table.
@@ -16,7 +23,7 @@ The first question is pretty simple; I just count the amount of orders that took
 
 ```
 SELECT
-    COUNT(DISTINCT order_id) AS unique_orders
+  COUNT(DISTINCT order_id) AS unique_orders
 FROM pizza_runner.customer_orders
 ```
 This uses the same query as the one above, but instead of counting all rows, it counds the amount of unique order IDs instead.
@@ -30,13 +37,13 @@ This uses the same query as the one above, but instead of counting all rows, it 
 ```
 WITH clean AS (
 SELECT
-    *,
-    CASE WHEN cancellation LIKE 'null' or cancellation LIKE '' THEN null ELSE cancellation END as cancellations
+  *,
+  CASE WHEN cancellation LIKE 'null' or cancellation LIKE '' THEN null ELSE cancellation END as cancellations
 FROM pizza_runner.runner_orders)
 
 SELECT
-    runner_id,
-    COUNT(order_id) AS delivered
+  runner_id,
+  COUNT(order_id) AS delivered
 FROM clean
 WHERE cancellations IS NULL
 GROUP BY runner_id
@@ -53,13 +60,13 @@ This one required some data cleaning beforehand. The null values in the `cancell
 
 ```
 SELECT
-p.pizza_name,
-COUNT(c.pizza_id) AS amount
+  p.pizza_name,
+  COUNT(c.pizza_id) AS amount
 FROM pizza_runner.customer_orders c
 JOIN pizza_runner.pizza_names p
-ON c.pizza_id = p.pizza_id
+  ON c.pizza_id = p.pizza_id
 JOIN pizza_runner.runner_orders r
-ON c.order_id = r.order_id
+  ON c.order_id = r.order_id
 WHERE CASE WHEN r.cancellation LIKE 'null' or r.cancellation LIKE '' THEN null ELSE r.cancellation END IS NULL
 GROUP BY p.pizza_name
 ```
@@ -74,12 +81,12 @@ Again, this required some cleaning. I joined the `customer_orders` and `pizza_na
 
 ```
 SELECT
-c.customer_id,
-p.pizza_name,
-COUNT(c.pizza_id) AS amount
+  c.customer_id,
+  p.pizza_name,
+  COUNT(c.pizza_id) AS amount
 FROM pizza_runner.customer_orders c
 JOIN pizza_runner.pizza_names p
-ON c.pizza_id = p.pizza_id
+  ON c.pizza_id = p.pizza_id
 GROUP BY c.customer_id, p.pizza_name
 ORDER BY customer_id
 ```
@@ -101,15 +108,15 @@ For this one, I simply had to count the amount of orders and group it by the cus
 ```
 WITH clean AS (
 SELECT
-    c.order_id
+  c.order_id
 FROM pizza_runner.customer_orders c
 JOIN pizza_runner.runner_orders r
-    ON c.order_id = r.order_id
+  ON c.order_id = r.order_id
 WHERE CASE WHEN r.cancellation LIKE 'null' or r.cancellation LIKE '' THEN null ELSE r.cancellation END IS NULL)
 
 SELECT 
-    order_id,
-    COUNT(order_id) AS amount
+  order_id,
+  COUNT(order_id) AS amount
 FROM clean
 GROUP BY order_id
 ORDER BY amount DESC
@@ -132,19 +139,19 @@ I first joined the necessary tables and pulled the relevant information with uns
 ```
 WITH clean AS (
 SELECT
-    c.customer_id,
-    c.pizza_id,
-  	CASE WHEN exclusions LIKE 'null' or exclusions LIKE '' THEN null ELSE exclusions END AS exclusions,
+  c.customer_id,
+  c.pizza_id,
+  CASE WHEN exclusions LIKE 'null' or exclusions LIKE '' THEN null ELSE exclusions END AS exclusions,
   CASE WHEN extras LIKE 'null' or extras LIKE '' THEN null ELSE extras END AS extras
 FROM pizza_runner.customer_orders c
 JOIN pizza_runner.runner_orders r
-    ON c.order_id = r.order_id
+  ON c.order_id = r.order_id
 WHERE CASE WHEN r.cancellation LIKE 'null' or r.cancellation LIKE '' THEN null ELSE r.cancellation END IS NULL)
 
 SELECT
-customer_id,
-SUM(CASE WHEN exclusions IS NOT NULL OR extras IS NOT NULL THEN 1 ELSE 0 END) AS changes,
-SUM(CASE WHEN exclusions IS NULL AND extras IS NULL THEN 1 ELSE 0 END) AS no_changes
+  customer_id,
+  SUM(CASE WHEN exclusions IS NOT NULL OR extras IS NOT NULL THEN 1 ELSE 0 END) AS changes,
+  SUM(CASE WHEN exclusions IS NULL AND extras IS NULL THEN 1 ELSE 0 END) AS no_changes
 FROM clean
 GROUP BY customer_id
 ORDER BY customer_id
@@ -164,17 +171,17 @@ This one was a bit more complicated and required lots of cleaning. Like the `can
 ```
 WITH clean AS (
 SELECT
-    c.customer_id,
-    c.pizza_id,
-  	CASE WHEN exclusions LIKE 'null' or exclusions LIKE '' THEN null ELSE exclusions END AS exclusions,
+  c.customer_id,
+  c.pizza_id,
+  CASE WHEN exclusions LIKE 'null' or exclusions LIKE '' THEN null ELSE exclusions END AS exclusions,
   CASE WHEN extras LIKE 'null' or extras LIKE '' THEN null ELSE extras END AS extras
 FROM pizza_runner.customer_orders c
 JOIN pizza_runner.runner_orders r
-    ON c.order_id = r.order_id
+  ON c.order_id = r.order_id
 WHERE CASE WHEN r.cancellation LIKE 'null' or r.cancellation LIKE '' THEN null ELSE r.cancellation END IS NULL)
 
 SELECT
-    SUM(CASE WHEN exclusions IS NOT NULL AND extras IS NOT NULL THEN 1 ELSE 0 END) AS both
+  SUM(CASE WHEN exclusions IS NOT NULL AND extras IS NOT NULL THEN 1 ELSE 0 END) AS both
 FROM clean
 ```
 This one just required a few changes from the last one. Instead of using OR in the CASE statement, it uses AND to check if it meets both criteria. I also removed the extra columns that are not relevant for this question. Although there are actually two orders that have both exclusions and extras, one was cancelled, so it was filtered out in the first query.
@@ -187,8 +194,8 @@ This one just required a few changes from the last one. Instead of using OR in t
 
 ```
 SELECT 
-EXTRACT(HOUR FROM order_time) AS hour,
-COUNT(order_id) AS amount
+  EXTRACT(HOUR FROM order_time) AS hour,
+  COUNT(order_id) AS amount
 FROM pizza_runner.customer_orders
 GROUP BY hour
 ORDER BY hour
@@ -209,21 +216,21 @@ For this, the hour of the day is extracted from the order time, and with that, i
 ```
 WITH clean AS (
 SELECT 
-    EXTRACT(isodow FROM order_time) AS day,
-    COUNT(order_id) AS amount
+  EXTRACT(isodow FROM order_time) AS day,
+  COUNT(order_id) AS amount
 FROM pizza_runner.customer_orders
 GROUP BY day
 ORDER BY day)
 
 SELECT
-    CASE WHEN day = 1 THEN 'Monday'
-    WHEN day = 2 THEN 'Tuesday'
-    WHEN day = 3 THEN 'Wednesday'
-    WHEN day = 4 THEN 'Thursday'
-    WHEN day = 5 THEN 'Friday'
-    WHEN day = 6 THEN 'Saturday'
-    WHEN day = 7 THEN 'Sunday' ELSE null END AS day,
-    amount
+  CASE WHEN day = 1 THEN 'Monday'
+  WHEN day = 2 THEN 'Tuesday'
+  WHEN day = 3 THEN 'Wednesday'
+  WHEN day = 4 THEN 'Thursday'
+  WHEN day = 5 THEN 'Friday'
+  WHEN day = 6 THEN 'Saturday'
+  WHEN day = 7 THEN 'Sunday' ELSE null END AS day,
+  amount
 FROM clean
 ```
 Here, "isodow" is extracted from `order_time`, which is the day of the week (1 = Monday, 2 = Tuesday, etc). The first query groups the amount of pizzas ordered per day of the week, and the second one changes the numbers to the actual name of the weekday using a long CASE statement.
@@ -240,10 +247,10 @@ Here, "isodow" is extracted from `order_time`, which is the day of the week (1 =
 
 ```
 SELECT
-    CASE WHEN registration_date BETWEEN '2021-01-01' AND '2021-01-07' THEN 'Week 1: 1/1-1/7'
-    WHEN registration_date BETWEEN '2021-01-08' AND '2021-01-14' THEN 'Week 2: 1/8-1/14'
-    WHEN registration_date BETWEEN '2021-01-15' AND '2021-01-21' THEN 'Week 3: 1/15-1/21' ELSE null END AS week,
-    COUNT(runner_id) AS signups
+  CASE WHEN registration_date BETWEEN '2021-01-01' AND '2021-01-07' THEN 'Week 1: 1/1-1/7'
+  WHEN registration_date BETWEEN '2021-01-08' AND '2021-01-14' THEN 'Week 2: 1/8-1/14'
+  WHEN registration_date BETWEEN '2021-01-15' AND '2021-01-21' THEN 'Week 3: 1/15-1/21' ELSE null END AS week,
+  COUNT(runner_id) AS signups
 FROM pizza_runner.runners
 GROUP BY week
 ORDER BY week
@@ -322,18 +329,18 @@ For this one, I used the same CTE to pull relevant cleaned information, the only
 ```
 WITH clean AS(
 SELECT
-DISTINCT c.order_id,
-c.customer_id,
-CASE WHEN r.distance LIKE '%km' THEN TRIM('%km' FROM r.distance)
-WHEN r.distance LIKE 'null' THEN null ELSE r.distance END AS distance
+  DISTINCT c.order_id,
+  c.customer_id,
+  CASE WHEN r.distance LIKE '%km' THEN TRIM('%km' FROM r.distance)
+    WHEN r.distance LIKE 'null' THEN null ELSE r.distance END AS distance
 FROM pizza_runner.customer_orders c
 JOIN pizza_runner.runner_orders r
-ON c.order_id = r.order_id
+  ON c.order_id = r.order_id
 WHERE CASE WHEN r.distance LIKE 'null' THEN null ELSE r.distance END IS NOT NULL)
 
 SELECT
-customer_id,
-AVG(CAST(distance AS DECIMAL)) AS avg_distance
+  customer_id,
+  AVG(CAST(distance AS DECIMAL)) AS avg_distance
 FROM clean
 GROUP BY customer_id
 ORDER BY customer_id
@@ -353,14 +360,14 @@ The `distance` column had inconsistencies with how the data was inputted, so it 
 ```
 WITH clean AS (
 SELECT
-CAST(CASE WHEN duration LIKE '%minutes' THEN TRIM('minutes' FROM duration)
-WHEN duration LIKE '%mins' THEN TRIM('mins' FROM duration)
-WHEN duration LIKE '%minute' THEN TRIM('minute' FROM duration)
-WHEN duration LIKE 'null' THEN NULL ELSE duration END AS INTEGER) AS delivery_duration
+  CAST(CASE WHEN duration LIKE '%minutes' THEN TRIM('minutes' FROM duration)
+    WHEN duration LIKE '%mins' THEN TRIM('mins' FROM duration)
+    WHEN duration LIKE '%minute' THEN TRIM('minute' FROM duration)
+    WHEN duration LIKE 'null' THEN NULL ELSE duration END AS INTEGER) AS delivery_duration
 FROM pizza_runner.runner_orders)
 
 SELECT
-MAX(delivery_duration) - MIN(delivery_duration) AS difference
+  MAX(delivery_duration) - MIN(delivery_duration) AS difference
 FROM clean
 ```
 The `duration` tab needed a lot of cleaning, as it was a mix of just numbers, x mins, x minutes, and x minute. I used a long CASE statement to clean up all inconsistencies, and I used CAST around that to convert them all to integers. I then subtracted the max value from the min value, getting 30 minutes as the difference.
@@ -373,19 +380,19 @@ The `duration` tab needed a lot of cleaning, as it was a mix of just numbers, x 
 
 ```
 WITH clean AS(
-SELECT
-runner_id,
-CAST(CASE WHEN distance LIKE '%km' THEN TRIM('km' FROM distance)
-  WHEN distance LIKE 'null' THEN NULL ELSE distance END AS DECIMAL) AS distance,
-CAST(CASE WHEN duration LIKE '%minutes' THEN TRIM('minutes' FROM duration)
-WHEN duration LIKE '%mins' THEN TRIM('mins' FROM duration)
-WHEN duration LIKE '%minute' THEN TRIM('minute' FROM duration)
-WHEN duration LIKE 'null' THEN NULL ELSE duration END AS DECIMAL) AS duration
+  SELECT
+  runner_id,
+  CAST(CASE WHEN distance LIKE '%km' THEN TRIM('km' FROM distance)
+    WHEN distance LIKE 'null' THEN NULL ELSE distance END AS DECIMAL) AS distance,
+  CAST(CASE WHEN duration LIKE '%minutes' THEN TRIM('minutes' FROM duration)
+    WHEN duration LIKE '%mins' THEN TRIM('mins' FROM duration)
+    WHEN duration LIKE '%minute' THEN TRIM('minute' FROM duration)
+    WHEN duration LIKE 'null' THEN NULL ELSE duration END AS DECIMAL) AS duration
 FROM pizza_runner.runner_orders)
 
 SELECT
-runner_id,
-ROUND(distance / duration * 60, 2) AS avg_km_per_hour
+  runner_id,
+  ROUND(distance / duration * 60, 2) AS avg_km_per_hour
 FROM clean
 WHERE distance IS NOT NULL
 ORDER BY runner_id, avg_km_per_hour DESC
@@ -408,13 +415,13 @@ The CTE cleaned up the `distance` and `duration` columns, removing inconsistanci
 ```
 WITH clean AS (
 SELECT
-runner_id,
-CASE WHEN cancellation LIKE 'null' or cancellation LIKE '' OR cancellation IS NULL THEN 1 ELSE NULL END AS cancellation
+  runner_id,
+  CASE WHEN cancellation LIKE 'null' or cancellation LIKE '' OR cancellation IS NULL THEN 1 ELSE NULL END AS cancellation
 FROM pizza_runner.runner_orders)
 
 SELECT
-runner_id,
-100 * COUNT(cancellation) / COUNT(*) AS avg
+  runner_id,
+  100 * COUNT(cancellation) / COUNT(*) AS avg
 FROM clean
 GROUP BY runner_id
 ORDER BY runner_id
@@ -433,18 +440,18 @@ The CTE basically flips all of the contents of the `cancellation` column, making
 ```
 WITH clean AS (
 SELECT
-pn.pizza_name,
-CAST(UNNEST(STRING_TO_ARRAY(pr.toppings, ',')) AS INTEGER) AS topping_id
+  pn.pizza_name,
+  CAST(UNNEST(STRING_TO_ARRAY(pr.toppings, ',')) AS INTEGER) AS topping_id
 FROM pizza_runner.pizza_names pn
 JOIN pizza_runner.pizza_recipes pr
-ON pn.pizza_id = pr.pizza_id)
+  ON pn.pizza_id = pr.pizza_id)
 
 SELECT
-c.pizza_name,
-pt.topping_name
+  c.pizza_name,
+  pt.topping_name
 FROM clean c
 JOIN pizza_runner.pizza_toppings pt
-ON c.topping_id = pt.topping_id
+  ON c.topping_id = pt.topping_id
 ORDER BY c.pizza_name, pt.topping_id
 ```
 Since the pizza ingredients are all in one column and separated by commas, they needed to be separated. I did so using UNNEST. Using STRING_TO_ARRAY, it found all of the ingredients separated by commas and put them in separate rows. I then converted them to integers so that they could easily be joined with the `pizza_toppings` table in order to easily identify which number corresponds to which ingredient.
@@ -471,22 +478,22 @@ Since the pizza ingredients are all in one column and separated by commas, they 
 ```
 WITH clean AS (
 SELECT
-order_id,
-CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END AS extras
+  order_id,
+  CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END AS extras
 FROM pizza_runner.customer_orders),
 
 separate AS (
 SELECT
-order_id,
-CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER) AS topping_id
+  order_id,
+  CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER) AS topping_id
 FROM clean)
 
 SELECT
-topping_name,
-COUNT(order_id) AS amount
+  topping_name,
+  COUNT(order_id) AS amount
 FROM separate s
 JOIN pizza_runner.pizza_toppings pt
-ON s.topping_id = pt.topping_id
+  ON s.topping_id = pt.topping_id
 GROUP BY topping_name
 ORDER BY amount DESC
 ```
@@ -503,22 +510,22 @@ Since this required lots of cleaning, I used two CTEs. The first one fixes all t
 ```
 WITH clean AS (
 SELECT
-order_id,
-CASE WHEN exclusions LIKE '' OR exclusions LIKE 'null' THEN null ELSE exclusions END AS exclusions
+  order_id,
+  CASE WHEN exclusions LIKE '' OR exclusions LIKE 'null' THEN null ELSE exclusions END AS exclusions
 FROM pizza_runner.customer_orders),
 
 separate AS (
 SELECT
-order_id,
-CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER) AS topping_id
+  order_id,
+  CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER) AS topping_id
 FROM clean)
 
 SELECT
-topping_name,
-COUNT(order_id) AS amount
+  topping_name,
+  COUNT(order_id) AS amount
 FROM separate s
 JOIN pizza_runner.pizza_toppings pt
-ON s.topping_id = pt.topping_id
+  ON s.topping_id = pt.topping_id
 GROUP BY topping_name
 ORDER BY amount DESC
 ```
@@ -539,48 +546,48 @@ This uses the exact same queries as the prior question but with the first two qu
 ```
 WITH clean AS (
 SELECT
-ROW_NUMBER() OVER() AS row,
-order_id,
-pizza_id,
-CASE WHEN exclusions LIKE '' OR exclusions LIKE 'null' THEN null ELSE exclusions END AS exclusions,
-  CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END AS extras
+  ROW_NUMBER() OVER() AS row,
+  order_id,
+  pizza_id,
+  CASE WHEN exclusions LIKE '' OR exclusions LIKE 'null' THEN null ELSE exclusions END AS exclusions,
+    CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END AS extras
 FROM pizza_runner.customer_orders),
 
 temp2 AS (SELECT
-row,
-CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER) AS exclusions,
-CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER) AS extras
+  row,
+  CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER) AS exclusions,
+  CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER) AS extras
 FROM clean),
 
 temp3 AS (SELECT
-row,
-STRING_AGG(topping_name, ', ') AS exclusions
+  row,
+  STRING_AGG(topping_name, ', ') AS exclusions
 FROM temp2 t2
 JOIN pizza_runner.pizza_toppings pt
-ON t2.exclusions = pt.topping_id
+  ON t2.exclusions = pt.topping_id
 GROUP BY row),
 
 temp4 AS (SELECT
-row,
-STRING_AGG(topping_name, ', ') AS extras
+  row,
+  STRING_AGG(topping_name, ', ') AS extras
 FROM temp2 t2
 JOIN pizza_runner.pizza_toppings pt
-ON t2.extras = pt.topping_id
+  ON t2.extras = pt.topping_id
 GROUP BY row)
 
 SELECT
-c.order_id,
-CONCAT(
-  CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 'Meat Lovers' ELSE pn.pizza_name END,
-  CASE WHEN t3.exclusions IS NOT NULL THEN ' - Exclude ' ELSE NULL END, t3.exclusions,
-  CASE WHEN t4.extras IS NOT NULL THEN ' - Extra ' ELSE NULL END, t4.extras) AS order
+  c.order_id,
+  CONCAT(
+    CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 'Meat Lovers' ELSE pn.pizza_name END,
+    CASE WHEN t3.exclusions IS NOT NULL THEN ' - Exclude ' ELSE NULL END, t3.exclusions,
+    CASE WHEN t4.extras IS NOT NULL THEN ' - Extra ' ELSE NULL END, t4.extras) AS order
 FROM clean c
 LEFT JOIN temp3 t3
-ON c.row = t3.row
+  ON c.row = t3.row
 LEFT JOIN temp4 t4
-ON c.row = t4.row
+  ON c.row = t4.row
 JOIN pizza_runner.pizza_names pn
-ON c.pizza_id = pn.pizza_id
+  ON c.pizza_id = pn.pizza_id
 ```
 This took a LOT of CTE tables, but it works!
 - clean - Cleans data and pulls relevant information. I also added a row number column, which is important for grouping ingredients back together later on.
@@ -612,52 +619,53 @@ This took a LOT of CTE tables, but it works!
 ```
 WITH clean AS (
 SELECT
-ROW_NUMBER() OVER() AS row,
-co.order_id,
-co.pizza_id,
-CASE WHEN exclusions LIKE '' OR exclusions LIKE 'null' THEN null ELSE exclusions END AS exclusions,
-CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END AS extras,
-pr.toppings
+  ROW_NUMBER() OVER() AS row,
+  co.order_id,
+  co.pizza_id,
+  CASE WHEN exclusions LIKE '' OR exclusions LIKE 'null' THEN null ELSE exclusions END AS exclusions,
+  CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END AS extras,
+  pr.toppings
 FROM pizza_runner.customer_orders co
   JOIN pizza_runner.pizza_recipes pr
   ON co.pizza_id = pr.pizza_id
 ORDER BY order_id),
   
 organize AS (SELECT
-row,
-c.order_id,
-pn.pizza_name,
-topping_name,
-CASE WHEN topping_id IN (
-  SELECT CAST(UNNEST(STRING_TO_ARRAY(pr.toppings, ',')) AS INTEGER)) THEN 1 ELSE NULL END AS toppings,
-CASE WHEN topping_id IN (
-  SELECT CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER)) THEN 1 ELSE NULL END AS exclusions,
-CASE WHEN topping_id IN (
-  SELECT CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER)) THEN 1 ELSE NULL END AS extras
+  row,
+  c.order_id,
+  pn.pizza_name,
+  topping_name,
+  CASE WHEN topping_id IN (
+    SELECT CAST(UNNEST(STRING_TO_ARRAY(pr.toppings, ',')) AS INTEGER)) THEN 1 ELSE NULL END AS toppings,
+  CASE WHEN topping_id IN (
+    SELECT CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER)) THEN 1 ELSE NULL END AS exclusions,
+  CASE WHEN topping_id IN (
+    SELECT CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER)) THEN 1 ELSE NULL END AS extras
 FROM
 clean c,
 pizza_runner.pizza_toppings pt,
 pizza_runner.pizza_recipes pr
-JOIN pizza_runner.pizza_names pn ON pr.pizza_id = pn.pizza_id
+JOIN pizza_runner.pizza_names pn
+  ON pr.pizza_id = pn.pizza_id
 WHERE c.pizza_id = pr.pizza_id
 ORDER BY row),
 
 filter AS (SELECT
-row,
-order_id,
-CASE WHEN pizza_name LIKE 'Meatlovers' THEN 'Meat Lovers' ELSE pizza_name END AS pizza_name,
-topping_name,
-toppings,
-extras,
-exclusions,
-CASE WHEN toppings = 1 AND extras = 1 THEN CONCAT('2x',topping_name)
-WHEN exclusions = 1 THEN NULL
-WHEN toppings = 1 OR extras = 1 THEN topping_name ELSE NULL END AS topping
+  row,
+  order_id,
+  CASE WHEN pizza_name LIKE 'Meatlovers' THEN 'Meat Lovers' ELSE pizza_name END AS pizza_name,
+  topping_name,
+  toppings,
+  extras,
+  exclusions,
+  CASE WHEN toppings = 1 AND extras = 1 THEN CONCAT('2x',topping_name)
+    WHEN exclusions = 1 THEN NULL
+    WHEN toppings = 1 OR extras = 1 THEN topping_name ELSE NULL END AS topping
 FROM organize)
 
 SELECT
-order_id,
-CONCAT(pizza_name, ': ', STRING_AGG(topping, ', ' ORDER BY topping ASC)) AS order
+  order_id,
+  CONCAT(pizza_name, ': ', STRING_AGG(topping, ', ' ORDER BY topping ASC)) AS order
 FROM filter
 GROUP BY pizza_name, order_id, row
 ORDER BY order_id
@@ -685,14 +693,14 @@ This one was quite complicated, and I did use some outside help for the subqueri
 
 ```
 WITH clean AS (SELECT
-ROW_NUMBER() OVER() AS row,
-co.order_id,
-co.pizza_id,
-CASE WHEN exclusions LIKE '' OR exclusions LIKE 'null' THEN null ELSE exclusions END AS exclusions,
-CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END AS extras,
-pr.toppings
+  ROW_NUMBER() OVER() AS row,
+  co.order_id,
+  co.pizza_id,
+  CASE WHEN exclusions LIKE '' OR exclusions LIKE 'null' THEN null ELSE exclusions END AS exclusions,
+  CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END AS extras,
+  pr.toppings
 FROM pizza_runner.customer_orders co
-  JOIN pizza_runner.pizza_recipes pr
+JOIN pizza_runner.pizza_recipes pr
   ON co.pizza_id = pr.pizza_id
 JOIN pizza_runner.runner_orders ro
   ON co.order_id = ro.order_id
@@ -701,23 +709,23 @@ ORDER BY order_id),
 
 data AS (
 SELECT
-row,
-order_id,
-topping_name,
-CASE WHEN topping_id IN (
-  SELECT CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER)) THEN 0
-ELSE CASE WHEN topping_id IN (
-  SELECT CAST(UNNEST(STRING_TO_ARRAY(toppings, ',')) AS INTEGER)) THEN COUNT(topping_name)
-ELSE 0 END END AS topping_count,
-CASE WHEN topping_id IN (
-  SELECT CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER)) THEN COUNT(topping_name)
-ELSE 0 END AS extra_count
+  row,
+  order_id,
+  topping_name,
+  CASE WHEN topping_id IN (
+    SELECT CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER)) THEN 0
+  ELSE CASE WHEN topping_id IN (
+    SELECT CAST(UNNEST(STRING_TO_ARRAY(toppings, ',')) AS INTEGER)) THEN COUNT(topping_name)
+  ELSE 0 END END AS topping_count,
+  CASE WHEN topping_id IN (
+    SELECT CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER)) THEN COUNT(topping_name)
+  ELSE 0 END AS extra_count
 FROM clean c, pizza_runner.pizza_toppings pt
 GROUP BY c.row, pt.topping_name, c.exclusions, pt.topping_id, c.toppings, c.extras, c.order_id)
 
 SELECT
-topping_name,
-SUM(topping_count) + SUM(extra_count) AS total
+  topping_name,
+  SUM(topping_count) + SUM(extra_count) AS total
 FROM data
 GROUP BY topping_name
 ORDER BY total DESC
@@ -744,13 +752,13 @@ This was pretty tricky and I honestly had to get some outside help for the subqu
 
 ```
 SELECT
-    SUM(CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 12
-    WHEN pn.pizza_name LIKE 'Vegetarian' THEN 10 ELSE 0 END) AS total
+  SUM(CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 12
+  WHEN pn.pizza_name LIKE 'Vegetarian' THEN 10 ELSE 0 END) AS total
 FROM pizza_runner.customer_orders co
 JOIN pizza_runner.pizza_names pn
-    ON co.pizza_id = pn.pizza_id
+  ON co.pizza_id = pn.pizza_id
 JOIN pizza_runner.runner_orders ro
-ON co.order_id = ro.order_id
+  ON co.order_id = ro.order_id
 WHERE CASE WHEN ro.cancellation LIKE 'null' or ro.cancellation LIKE '' THEN null ELSE ro.cancellation END IS NULL
 ```
 Pretty simple query. If an order is 'Meatlovers' it assigns $12 to the total column. If it's 'Vegetarian', it becomes $10. The values of the column are added up to give the total amount made from all orders. A WHERE clause is also used to filter out orders that were not successfully delivered.
@@ -765,21 +773,21 @@ Pretty simple query. If an order is 'Meatlovers' it assigns $12 to the total col
 ```
 WITH prices AS (
 SELECT
-    SUM(CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 12
-    WHEN pn.pizza_name LIKE 'Vegetarian' THEN 10 ELSE 0 END) AS total
+  SUM(CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 12
+  WHEN pn.pizza_name LIKE 'Vegetarian' THEN 10 ELSE 0 END) AS total
 FROM pizza_runner.customer_orders co
 JOIN pizza_runner.pizza_names pn
-    ON co.pizza_id = pn.pizza_id
+  ON co.pizza_id = pn.pizza_id
 JOIN pizza_runner.runner_orders ro
-ON co.order_id = ro.order_id
+  ON co.order_id = ro.order_id
 WHERE CASE WHEN ro.cancellation LIKE 'null' or ro.cancellation LIKE '' THEN null ELSE ro.cancellation END IS NULL),
 
 extra_cost AS (
 SELECT
-    UNNEST(STRING_TO_ARRAY(CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END, ',')) AS extras
+  UNNEST(STRING_TO_ARRAY(CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END, ',')) AS extras
 FROM pizza_runner.customer_orders co
 JOIN pizza_runner.runner_orders ro
-ON co.order_id = ro.order_id
+  ON co.order_id = ro.order_id
 WHERE CASE WHEN ro.cancellation LIKE 'null' or ro.cancellation LIKE '' THEN null ELSE ro.cancellation END IS NULL)
 
 SELECT
@@ -841,33 +849,33 @@ To do this, I simply created the `ratings` table using `order_id` and `rating` a
 ```
 WITH clean AS (
 SELECT
-order_id,
-runner_id,
-CASE WHEN pickup_time LIKE 'null' THEN null ELSE CAST(pickup_time AS TIMESTAMP) END AS pickup_time,
-CAST(CASE WHEN distance LIKE '%km' THEN TRIM('km' FROM distance)
-  WHEN distance LIKE 'null' THEN NULL ELSE distance END AS DECIMAL) AS distance,
-CAST(CASE WHEN duration LIKE '%minutes' THEN TRIM('minutes' FROM duration)
-WHEN duration LIKE '%mins' THEN TRIM('mins' FROM duration)
-WHEN duration LIKE '%minute' THEN TRIM('minute' FROM duration)
-WHEN duration LIKE 'null' THEN NULL ELSE duration END AS DECIMAL) AS duration
+  order_id,
+  runner_id,
+  CASE WHEN pickup_time LIKE 'null' THEN null ELSE CAST(pickup_time AS TIMESTAMP) END AS pickup_time,
+  CAST(CASE WHEN distance LIKE '%km' THEN TRIM('km' FROM distance)
+    WHEN distance LIKE 'null' THEN NULL ELSE distance END AS DECIMAL) AS distance,
+  CAST(CASE WHEN duration LIKE '%minutes' THEN TRIM('minutes' FROM duration)
+    WHEN duration LIKE '%mins' THEN TRIM('mins' FROM duration)
+    WHEN duration LIKE '%minute' THEN TRIM('minute' FROM duration)
+    WHEN duration LIKE 'null' THEN NULL ELSE duration END AS DECIMAL) AS duration
 FROM pizza_runner.runner_orders)
   
 SELECT 
-co.customer_id,
-co.order_id,
-c.runner_id,
-r.rating,
-co.order_time,
-c.pickup_time,
-DATE_PART('minute', c.pickup_time - co.order_time) AS time_from_order_and_pickup,
-c.duration AS delivery_duration,
-ROUND(c.distance / c.duration * 60, 2) AS avg_speed,
-COUNT(co.customer_id) AS pizza_count
+  co.customer_id,
+  co.order_id,
+  c.runner_id,
+  r.rating,
+  co.order_time,
+  c.pickup_time,
+  DATE_PART('minute', c.pickup_time - co.order_time) AS time_from_order_and_pickup,
+  c.duration AS delivery_duration,
+  ROUND(c.distance / c.duration * 60, 2) AS avg_speed,
+  COUNT(co.customer_id) AS pizza_count
 FROM pizza_runner.customer_orders co
 LEFT JOIN pizza_runner.ratings r
-ON co.order_id = r.order_id
+  ON co.order_id = r.order_id
 LEFT JOIN clean c
-ON co.order_id = c.order_id
+  ON co.order_id = c.order_id
 GROUP BY co.order_id, customer_id, order_time, r.rating, c.runner_id, c.pickup_time, c.duration, c.distance
 ORDER BY co.order_id
 ```
@@ -890,18 +898,18 @@ The CTE cleans the `runner_orders` table, and the rest of the information is pul
 
 ```
 WITH pizza_price AS (SELECT
-    SUM(CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 12
-    WHEN pn.pizza_name LIKE 'Vegetarian' THEN 10 ELSE 0 END) AS total
+  SUM(CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 12
+  WHEN pn.pizza_name LIKE 'Vegetarian' THEN 10 ELSE 0 END) AS total
 FROM pizza_runner.customer_orders co
 JOIN pizza_runner.pizza_names pn
-    ON co.pizza_id = pn.pizza_id
+  ON co.pizza_id = pn.pizza_id
 JOIN pizza_runner.runner_orders ro
-ON co.order_id = ro.order_id
+  ON co.order_id = ro.order_id
 WHERE CASE WHEN ro.cancellation LIKE 'null' or ro.cancellation LIKE '' THEN null ELSE ro.cancellation END IS NULL)
 
 SELECT
-total - SUM(CAST(CASE WHEN distance LIKE '%km' THEN TRIM('km' FROM distance)
-  WHEN distance LIKE 'null' THEN NULL ELSE distance END AS DECIMAL)) * 0.3 AS balance
+  total - SUM(CAST(CASE WHEN distance LIKE '%km' THEN TRIM('km' FROM distance)
+    WHEN distance LIKE 'null' THEN NULL ELSE distance END AS DECIMAL)) * 0.3 AS balance
 FROM pizza_runner.runner_orders, pizza_price
 GROUP BY total
 ```
