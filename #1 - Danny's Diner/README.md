@@ -2,6 +2,9 @@
 
 In this case study, a restaurant has provided various data on its customers, sales, and menu, and has asked to find specific pieces of data using complex SQL queries. This database uses three tables: `sales`, which shows what customer bought what product on what day, `members`, which lists customers as well as the date they became a member, and `menu`, which lists all of the menu items and their prices.
 
+### Entity Relationship Diagram
+![127271130-dca9aedd-4ca9-4ed8-b6ec-1e1920dca4a8](https://github.com/user-attachments/assets/c25db0b9-00d4-4c4b-9d1c-1062a9cbd381)
+
 ### 1. What is the total amount each customer spent at the restaurant?
 
 ```
