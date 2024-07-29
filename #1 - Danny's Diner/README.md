@@ -1,18 +1,16 @@
-## Case Study 1: Danny's Diner
+# [Case Study #1: Danny's Diner](https://8weeksqlchallenge.com/case-study-1/)
 
-**Case Study Link** https://8weeksqlchallenge.com/case-study-1/
-
-In this case study, a restaurant has provided various data on its customers, sales, and menu, and has asked to find specific pieces of data using complex SQL queries. 
+In this case study, a restaurant has provided various data on its customers, sales, and menu, and has asked to find specific pieces of data using complex SQL queries. This database uses three tables: `sales`, which shows what customer bought what product on what day, `members`, which lists customers as well as the date they became a member, and `menu`, which lists all of the menu items and their prices.
 
 ### 1. What is the total amount each customer spent at the restaurant?
 
 ```
 SELECT
-    s.customer_id,
-    SUM(m.price) AS total
+  s.customer_id,
+  SUM(m.price) AS total
 FROM dannys_diner.sales s
 JOIN dannys_diner.menu m
-    ON s.product_id = m.product_id
+  ON s.product_id = m.product_id
 GROUP BY customer_id
 ORDER BY customer_id;
 ```
@@ -28,8 +26,8 @@ To solve this question, I first used JOIN to pull relevant data from both the `s
 
 ```
 SELECT
-    customer_id,
-    COUNT(DISTINCT order_date) AS days_visited
+  customer_id,
+  COUNT(DISTINCT order_date) AS days_visited
 FROM dannys_diner.sales
 GROUP BY customer_id
 ORDER BY customer_id;
@@ -45,24 +43,24 @@ This question just required the `sales` table. Since `order_date` only showed th
 ### 3. What was the first item from the menu purchased by each customer?
 
 ```
-WITH temp AS
+WITH ranked AS
 SELECT DISTINCT
-    s.customer_id,
-    s.order_date,
-    m.product_name,
-    DENSE_RANK() OVER(PARTITION BY s.customer_id ORDER BY s.order_date) AS ranking
+  s.customer_id,
+  s.order_date,
+  m.product_name,
+  DENSE_RANK() OVER(PARTITION BY s.customer_id ORDER BY s.order_date) AS ranking
 FROM dannys_diner.sales s
 JOIN dannys_diner.menu m
-    ON s.product_id = m.product_id
+  ON s.product_id = m.product_id
 ORDER BY ranking, s.order_date)
 
 SELECT *
-FROM temp
+FROM ranked
 WHERE ranking = 1
 ```
 Once again, joining the `sales` and `menu` tables was required for this question. I used SELECT DISTINCT to ensure there were not any duplicate entries present. In order to find the first purchase from each customer, I used DENSE_RANK. The PARTITION BY clause ensured that each customer id has its own ranking, making the first order date for each customer #1.
 
-I used this data as a temporary table and ran another query to only pull the orders where the ranking was equal to 1, meaning it was the customer's first order. Even though all of the first orders would be at the top of the table regardless, this extra step removes the later orders, which are not relevant to the question
+I used this data as a CTE (Common Table Expression), which allows me to use it as a temporary table to use in a second query. With this, I ran another query to only pull the orders where the ranking was equal to 1, meaning it was the customer's first order. Even though all of the first orders would be at the top of the table regardless, this extra step removes the later orders, which are not relevant to the question
 
 | customer_id | order_date               | product_name | ranking |
 | ----------- | ------------------------ | ------------ | ------- |
@@ -77,11 +75,11 @@ Customer A visited twice on January 1, buying both curry and sushi. It is unclea
 
 ```
 SELECT
-    m.product_name,
-    COUNT(s.product_id) AS amount
+  m.product_name,
+  COUNT(s.product_id) AS amount
 FROM dannys_diner.sales s
 JOIN dannys_diner.menu m
-    ON s.product_id = m.product_id
+  ON s.product_id = m.product_id
 GROUP BY m.product_name
 ORDER BY amount DESC
 ```
@@ -96,23 +94,23 @@ This query joins the `sales` and `menu` tables, counts the number of each produc
 ### 5. Which item was the most popular for each customer?
 
 ```
-WITH temp AS (
+WITH ranked AS (
 SELECT
-    s.customer_id,
-    m.product_name,
-    COUNT(s.product_id) AS amount,
-    DENSE_RANK() OVER(PARTITION BY s.customer_id ORDER BY COUNT(s.product_id) DESC) AS ranking
+  s.customer_id,
+  m.product_name,
+  COUNT(s.product_id) AS amount,
+  DENSE_RANK() OVER(PARTITION BY s.customer_id ORDER BY COUNT(s.product_id) DESC) AS ranking
 FROM dannys_diner.sales s
 JOIN dannys_diner.menu m
-    ON s.product_id = m.product_id
+  ON s.product_id = m.product_id
 GROUP BY s.customer_id, m.product_name
 ORDER BY ranking, s.customer_id)
 
 SELECT *
-FROM temp
+FROM ranked
 WHERE ranking = 1
 ```
-Similar to question 3, I used a temporary table to get these results. This question also required two GROUP BY values, since it needed to see how many times each customer bought each product rather than the amount of times each product was bought or the amount of times each customer bought anything. Similar to question 3, I used DENSE_RANK to add rankings to each customer id, ordered in descending order to give the highest ranking to the product that was bought the most by each customer.
+Similar to question 3, I used a CTE to get these results. This question also required two GROUP BY values, since it needed to see how many times each customer bought each product rather than the amount of times each product was bought or the amount of times each customer bought anything. Similar to question 3, I used DENSE_RANK to add rankings to each customer id, ordered in descending order to give the highest ranking to the product that was bought the most by each customer.
 
 I then used that table to create a second query to only pull results where the ranking was 1.
 
@@ -129,7 +127,7 @@ A and C's favorite product is ramen, which they each bought 3 times. B has a 3-w
 ### 6. Which item was purchased first by the customer after they became a member?
 
 ```
-WITH temp1 AS (
+WITH clean AS (
 SELECT
     s.customer_id,
     s.order_date,
@@ -142,18 +140,18 @@ JOIN dannys_diner.members ms
     ON s.customer_id = ms.customer_id
 WHERE join_date < order_date),
 
-temp2 AS(
+ranked AS(
 SELECT *,
     DENSE_RANK() OVER(PARTITION BY customer_id ORDER BY order_date) AS ranking
-FROM temp1)
+FROM clean)
 
 SELECT
     customer_id,
     product_name
-FROM temp2
+FROM ranked
 WHERE ranking = 1
 ```
-This one took two temporary tables. The first one, called `temp1`, joins all the tables and filters out data so that only visits after the customer becomes a member are included. The second one, `temp2`, takes that first set of data and ranks them with DENSE_RANK, giving the earliest visit per customer rank 1. Lastly, using the data with the rankings from the table `temp2`, I filtered data to only show what each customer ordered on the rows with the ranking 1, which are their earliest visits *after* they became a member.
+This one took two CTEs. The first one, called `clean`, joins all the tables and filters out data so that only visits after the customer becomes a member are included. The second one, `ranked`, takes that first set of data and ranks them with DENSE_RANK, giving the earliest visit per customer rank 1. Lastly, using the data with the rankings from the `ranked` CTE, I filtered data to only show what each customer ordered on the rows with the ranking 1, which are their earliest visits *after* they became a member.
 
 | customer_id | product_name |
 | ----------- | ------------ |
@@ -165,7 +163,7 @@ Customer A's first purchase after becoming a member was ramen, and customer B's 
 ### 7. Which item was purchased just before the customer became a member?
 
 ```
-WITH temp1 AS (
+WITH clean AS (
 SELECT
     s.customer_id,
     s.order_date,
@@ -178,18 +176,18 @@ JOIN dannys_diner.members ms
     ON s.customer_id = ms.customer_id
 WHERE join_date > order_date),
 
-temp2 AS(
+ranked AS(
   SELECT *,
     DENSE_RANK() OVER(PARTITION BY customer_id ORDER BY order_date DESC) AS ranking
-FROM temp1)
+FROM clean)
 
 SELECT
     customer_id,
     product_name
-FROM temp2
+FROM ranked
 WHERE ranking = 1
 ```
-This uses the same query as question 6, but with two changes. The join date should be before becoming a member instead of after, so the sign in the WHERE clause in the first temporary table was flipped. In the DENSE_RANK clause, instead of ordering it in ascending order, it should be descending instead, since it is asking for the most recent date instead of the earliest date. Customer C is not included because they are not a member.
+This uses the same query as question 6, but with two changes. The join date should be before becoming a member instead of after, so the sign in the WHERE clause in the first CTE was flipped. In the DENSE_RANK clause, instead of ordering it in ascending order, it should be descending instead, since it is asking for the most recent date instead of the earliest date. Customer C is not included because they are not a member.
 
 | customer_id | product_name |
 | ----------- | ------------ |
@@ -202,7 +200,7 @@ Customer A ordered both sushi and curry on the same day, though it is unsure whi
 ### 8. What is the total items and amount spent for each member before they became a member?
 
 ```
-WITH temp AS(
+WITH before AS(
 SELECT
     s.customer_id,
     s.order_date,
@@ -219,11 +217,11 @@ SELECT
 customer_id,
 COUNT(customer_id) AS total_items,
 SUM(price) AS total_price
-FROM temp
+FROM before
 GROUP BY customer_id
 ORDER BY customer_id
 ```
-Again, this uses a temporary table to only pull the orders that took place before each customer became a member. It then counts the amount of orders and sums up the cost of those orders and groups them together. Like the above tables, customer C is not included because they are not a member.
+Again, this uses a CTE called `before` to only pull the orders that took place before each customer became a member. It then counts the amount of orders and sums up the cost of those orders and groups them together. Like the above tables, customer C is not included because they are not a member.
 
 | customer_id | total_items | total_price |
 | ----------- | ----------- | ----------- |
@@ -233,7 +231,7 @@ Again, this uses a temporary table to only pull the orders that took place befor
 ### 9. If each $1 spent equates to 10 points and sushi has a 2x points multiplier - how many points would each customer have?
 
 ```
-WITH temp AS (
+WITH point_calc AS (
 SELECT
     s.customer_id,
     m.product_name,
@@ -246,7 +244,7 @@ JOIN dannys_diner.menu m
 SELECT
     customer_id,
     SUM(points) AS point_total
-FROM temp
+FROM point_calc
 GROUP BY customer_id
 ORDER BY customer_id
 ```
@@ -261,7 +259,7 @@ Here, a CASE statement is used to find the accurate amount of points per product
 ### 10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
 
 ```
-WITH temp AS (
+WITH point_calc AS (
 SELECT
     s.customer_id,
     m.price * 10 +
@@ -277,12 +275,12 @@ WHERE s.order_date < '2021-02-01')
 SELECT
     customer_id,
     SUM(points) AS point_total
-FROM temp
+FROM point_calc
 GROUP BY customer_id
 ORDER BY customer_id
 ```
 
-The temporary table again pulls relevant data from each table and has a long CASE statement to show the accurate amount of points per order. All orders start by being multiplied by 10. It then checks if the order was placed within a week of the customer becoming a member *or* if the order was sushi. If either of those criteria are true, it multiplies the price by 10 again and adds the two, multiplying it by 20 in total.
+The CTE again pulls relevant data from each table and has a long CASE statement to show the accurate amount of points per order. All orders start by being multiplied by 10. It then checks if the order was placed within a week of the customer becoming a member *or* if the order was sushi. If either of those criteria are true, it multiplies the price by 10 again and adds the two, multiplying it by 20 in total.
 
 Some additional notes for this question:
 - It does not specify whether sushi should get multiplied a second time, making it 4x. For this scenario, I assumed it did not, so it only multiplies by 20 even if both criteria are met.
@@ -359,7 +357,7 @@ For this question, I had to recreate the table below:
 I did so using the following query:
 
 ```
-WITH temp AS (
+WITH cte AS (
 SELECT
     s.customer_id,
     s.order_date,
@@ -375,7 +373,7 @@ ORDER BY s.customer_id ASC, s.order_date ASC, m.price DESC)
 
 SELECT *,
     CASE WHEN member = 'N' THEN null ELSE RANK() OVER(PARTITION BY customer_id, member ORDER BY order_date) END AS ranking
-FROM temp
+FROM cte
 ```
 
-I started with the exact same query as the prior bonus question, as it used the same columns in the same order. To get the final column, I put the initial query's results in a temporary table and created a CASE clause to make all instances where the `member` column has "N" return null. Otherwise, it ranks the remaining orders, with the earliest ones having the highest ranking. It was partitioned by both `customer_id` and `member` so that it did not include the null instances in the rankings; it sorted them separately, but those rankings are not shown since they are overwritten by null values.
+I started with the exact same query as the prior bonus question, as it used the same columns in the same order. To get the final column, I put the initial query's results in a CTE and created a CASE statement to make all instances where the `member` column has "N" return null. Otherwise, it ranks the remaining orders, with the earliest ones having the highest ranking. It was partitioned by both `customer_id` and `member` so that it did not include the null instances in the rankings; it sorted them separately, but those rankings are not shown since they are overwritten by null values.
