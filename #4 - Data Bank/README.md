@@ -170,27 +170,79 @@ This separates deposits, purchases, and withdrawals to separate columns so that 
 ### 4. What is the closing balance for each customer at the end of the month?
 
 ```
-WITH cte AS (SELECT
-customer_id,
-MONTH(txn_date) AS monthnum,
-SUM(CASE WHEN txn_type = 'deposit' THEN txn_amount ELSE 0 END) +
-SUM(CASE WHEN txn_type IN('purchase', 'withdrawal') THEN (-1 * txn_amount) ELSE 0 END) AS total
-FROM customer_transactions
-GROUP BY customer_id, monthnum
-ORDER BY customer_id, monthnum)
+CREATE TABLE temp_table (
+num INT PRIMARY KEY,
+monthdate DATE);
 
-SELECT
-customer_id,
-monthnum,
-CASE WHEN monthnum = 1 THEN '1/31/2020'
-WHEN monthnum = 2 THEN '2/29/2020'
-WHEN monthnum = 3 THEN '3/31/2020'
-WHEN monthnum = 4 THEN '4/30/2020' ELSE NULL END AS endmonth,
-total
-FROM cte
+INSERT INTO temp_table
+  (num, monthdate)
+VALUES
+  (1, '2020-01-31'),
+  (2, '2020-02-29'),
+  (3, '2020-03-31'),
+  (4, '2020-04-30');
 ```
 
-Work in Progress
+I first created a table to identify end dates and create a row for each month for each customer id, even if they did not have any transactions in a specific month. With this, I used many CTE tables to complete this question.
+
+```
+WITH cte AS (
+SELECT
+  customer_id,
+  MONTH(txn_date) AS monthnum,
+  SUM(CASE WHEN txn_type = 'deposit' THEN txn_amount ELSE 0 END) +
+  SUM(CASE WHEN txn_type IN('purchase', 'withdrawal') THEN (-1 * txn_amount) ELSE 0 END) AS total
+FROM customer_transactions
+GROUP BY customer_id, monthnum
+ORDER BY customer_id, monthnum),
+```
+This CTE pulls the total for each customer in each month they made transactions. Months where they did not make transactions are not included yet.
+
+```
+alldates AS (
+SELECT DISTINCT
+  customer_id,
+  num AS monthnum,
+  monthnum AS num,
+  monthdate,
+  total
+FROM cte, temp_table
+ORDER BY customer_id, num),
+```
+This merges the prior CTE with the temporary table to create the below table. Although it looks messy, the next CTE cleans it up further. (`monthnum` and `num` are also swapped to be more accurate for the remainder of the query; `monthnum` now corresponds with `monthdate`)
+![image](https://github.com/user-attachments/assets/a64a6bee-c6ea-4d01-9e53-acf1ef74d825)
+
+```
+final AS (
+SELECT
+  ad.customer_id,
+  ad.monthnum,
+  ad.num,
+  ad.monthdate AS end_month,
+  c.total,
+  SUM(ad.total) OVER (PARTITION BY ad.customer_id, ad.monthnum) AS end_balance
+FROM alldates ad
+LEFT JOIN cte c
+  ON ad.monthnum = c.monthnum AND ad.customer_id = c.customer_id
+WHERE ad.monthnum >= ad.num)
+```
+This CTE does lots of things. First, it joins the two prior CTEs to get an accurate total for each month, as seen in the new `total` column. It is also filtered to remove instances where `monthnum` is less than `num` so that totals that have not taken place yet do not show. This allows the PARTITION BY statement to accurately show the total for that specific month.
+
+(For example: For customer 1 in Month 3, it pulls the total values from the prior table that corresponds with the right values. It finds 312 and -952, so they are added to make 640. In Month 2, however, the WHERE clause removes the row with -952, since that had not taken place yet, so the total for Month 2 is 312.
+
+![image](https://github.com/user-attachments/assets/fd02defe-c7bf-4020-9fc5-9bda6e750a58)
+
+```
+SELECT DISTINCT
+  customer_id,
+  end_month,
+  CASE WHEN total IS NULL THEN 0 ELSE total END AS monthly_change,
+  end_balance
+FROM final
+```
+Finally, duplicate values are filtered out so that each customer only has one row per month.
+
+![image](https://github.com/user-attachments/assets/ced0741e-9165-4cd4-bfad-c48ea8e9d1e1)
 
 ### 5. What is the percentage of customers who increase their closing balance by more than 5%?
 ## C. Data Allocation Challenge
