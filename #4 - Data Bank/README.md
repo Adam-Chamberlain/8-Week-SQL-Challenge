@@ -210,6 +210,7 @@ FROM cte, temp_table
 ORDER BY customer_id, num),
 ```
 This merges the prior CTE with the temporary table to create the below table. Although it looks messy, the next CTE cleans it up further. (`monthnum` and `num` are also swapped to be more accurate for the remainder of the query; `monthnum` now corresponds with `monthdate`)
+
 ![image](https://github.com/user-attachments/assets/a64a6bee-c6ea-4d01-9e53-acf1ef74d825)
 
 ```
