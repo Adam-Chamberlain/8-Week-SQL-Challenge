@@ -214,7 +214,7 @@ This merges the prior CTE with the temporary table to create the below table. Al
 ![image](https://github.com/user-attachments/assets/a64a6bee-c6ea-4d01-9e53-acf1ef74d825)
 
 ```
-final AS (
+clean AS (
 SELECT
   ad.customer_id,
   ad.monthnum,
@@ -239,13 +239,40 @@ SELECT DISTINCT
   end_month,
   CASE WHEN total IS NULL THEN 0 ELSE total END AS monthly_change,
   end_balance
-FROM final
+FROM clean
 ```
 Finally, duplicate values are filtered out so that each customer only has one row per month.
 
 ![image](https://github.com/user-attachments/assets/ced0741e-9165-4cd4-bfad-c48ea8e9d1e1)
 
 ### 5. What is the percentage of customers who increase their closing balance by more than 5%?
+
+```
+final AS (SELECT DISTINCT
+  a.customer_id,
+  a.end_balance AS jan,
+  b.end_balance AS apr,
+  b.end_balance - a.end_balance AS difference,
+  ROUND(CASE WHEN a.end_balance < 0 THEN -1 ELSE 1 END *
+    (b.end_balance / a.end_balance -1) * 100, 2) AS percent
+FROM (SELECT * FROM clean WHERE monthnum = 1) a
+JOIN (SELECT * FROM clean WHERE monthnum = 4) b
+  ON a.customer_id = b.customer_id)
+
+SELECT
+  ROUND((SELECT COUNT(percent) FROM final WHERE percent >= 5) / COUNT(percent) * 100,2) AS percent
+FROM final
+```
+Using all of the CTEs from Question 4, I was able to solve this with just one more CTE. Basically, it allows me to pull the percent difference between January's balance and April's balance. I did this by merging the same table with itself to put each month's balance on separate rows so that they could be compared.
+
+![image](https://github.com/user-attachments/assets/d6cf8ed3-4ee5-4008-b705-d1e0bfc4012c)
+
+With that, I could simply filter out instances where the percentage was less than five, divide it by the total, and get the answer.
+
+|percent|
+|---|
+|33.20|
+
 ## C. Data Allocation Challenge
 To test out a few different hypotheses - the Data Bank team wants to run an experiment where different groups of customers would be allocated data using 3 different options:
 
