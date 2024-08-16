@@ -381,6 +381,8 @@ Using similar CTE tables to instead pull instances with pro monthly and basic mo
 - upgrades from pro monthly to pro annual are paid at the end of the current billing period and also starts at the end of the month period
 - once a customer churns they will no longer make payments
 
+I will return to this question at a later date.
+
 ## D. Outside The Box Questions
 ### 1. How would you calculate the rate of growth for Foodie-Fi?
 
