@@ -1,4 +1,4 @@
-# [Case Study 4: Data Bank](https://8weeksqlchallenge.com/case-study-4/)
+# [Case Study #4: Data Bank](https://8weeksqlchallenge.com/case-study-4/)
 
 This case study looks at a digital bank that stores money as well as data. Customers are given a specific amount of cloud storage depending on how much money they have stored within the bank. This set of data uses three tables: `Regions`, which pairs region names with region IDs, `Customer Nodes`, which lists all customers with their respective regions and their nodes, which are randomly distributed, and `Customer Transactions`, which lists all transactions that have taken place for each customer, including deposits, withdrawals, and purchases.
 
