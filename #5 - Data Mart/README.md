@@ -209,6 +209,8 @@ ORDER BY calendar_year, platform
 ```
 `average1` uses the `avg_transaction` column, and `average2` uses an alternative way. The results are slightly difference because 1 takes the average from each row and finds the average of the averages, while 2 sums up the totals and finds the average that way. Option 2 is more accurate because of this.
 
+![image](https://github.com/user-attachments/assets/87df4cb3-9862-44aa-bf29-b98f79f904ec)
+
 ## 3. Before & After Analysis
 This technique is usually used when we inspect an important event and want to inspect the impact before and after a certain point in time.
 
