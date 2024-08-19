@@ -99,9 +99,115 @@ GROUP BY platform
 ![image](https://github.com/user-attachments/assets/2b33410a-516c-464c-b47b-df7595a59616)
 
 ### 6. What is the percentage of sales for Retail vs Shopify for each month?
+
+```
+cte AS (
+  SELECT
+    c.calendar_year,
+    c.month_number,
+    SUM(sales) AS total_sales,
+    r_sales,
+    s_sales
+  FROM clean c
+  JOIN (
+    SELECT
+      calendar_year,
+      month_number,
+      SUM(sales) AS r_sales
+    FROM clean
+    WHERE platform = 'Retail'
+    GROUP BY calendar_year, month_number) r
+  ON c.calendar_year = r.calendar_year AND c.month_number = r.month_number
+  JOIN (
+    SELECT
+      calendar_year,
+      month_number,
+      SUM(sales) AS s_sales
+    FROM clean
+    WHERE platform = 'Shopify'
+    GROUP BY calendar_year, month_number) s
+  ON c.calendar_year = s.calendar_year AND c.month_number = s.month_number
+  GROUP BY c.calendar_year, c.month_number, r_sales, s_sales)
+
+SELECT
+  calendar_year,
+  month_number,
+  ROUND(r_sales / total_sales * 100, 2) AS retail,
+  ROUND(s_sales / total_sales * 100, 2) AS shopify
+FROM cte
+ORDER BY calendar_year, month_number
+```
+This CTE pulls sales data from each month in each year within each platform and puts it all in one table so that it can easily be divided to find the percentages. The data goes up to August 2020, but only 2018/19 are shown on the below image.
+
+![image](https://github.com/user-attachments/assets/3154609b-da18-4934-8141-3800071a7d1a)
+
 ### 7. What is the percentage of sales by demographic for each year in the dataset?
+
+```
+cte AS (
+  SELECT
+    cl.calendar_year,
+    SUM(sales) AS total_sales,
+    c_sales,
+    f_sales
+  FROM clean cl
+  JOIN (
+    SELECT
+      calendar_year,
+      SUM(sales) AS c_sales
+    FROM clean
+    WHERE demographic = 'Couples'
+    GROUP BY calendar_year) c
+  ON cl.calendar_year = c.calendar_year
+  JOIN (
+    SELECT
+      calendar_year,
+      SUM(sales) AS f_sales
+    FROM clean
+    WHERE demographic = 'Families'
+    GROUP BY calendar_year) f
+  ON cl.calendar_year = f.calendar_year
+  GROUP BY cl.calendar_year, c_sales, f_sales)
+  
+  SELECT
+  calendar_year,
+  ROUND(c_sales / total_sales * 100, 2) AS couples,
+  ROUND(f_sales / total_sales * 100, 2) AS families,
+  ROUND((1 - ((c_sales + f_sales) / total_sales)) * 100, 2) AS unknown
+  FROM cte
+  ORDER BY calendar_year
+```
+I used a similar solution to question 6 for this one. I also calculated the percentage that is unknown, meaning they are not identified as couples or families.
+
+![image](https://github.com/user-attachments/assets/99daf389-340b-4dad-ad88-b3a67320f352)
+
 ### 8. Which age_band and demographic values contribute the most to Retail sales?
+
+```
+SELECT
+age_band,
+demographic,
+SUM(sales) AS total
+FROM clean
+WHERE platform = 'Retail'
+GROUP BY age_band, demographic
+ORDER BY total DESC
+```
+![image](https://github.com/user-attachments/assets/351bd59d-487c-436a-87b8-4cafe849c8a2)
+
 ### 9. Can we use the avg_transaction column to find the average transaction size for each year for Retail vs Shopify? If not - how would you calculate it instead?
+
+```
+SELECT
+calendar_year,
+platform,
+ROUND(AVG(avg_transaction), 2) AS average1,
+ROUND(SUM(sales) / SUM(transactions), 2) AS average2
+FROM clean
+GROUP BY calendar_year, platform
+ORDER BY calendar_year, platform
+```
+`average1` uses the `avg_transaction` column, and `average2` uses an alternative way. The results are slightly difference because 1 takes the average from each row and finds the average of the averages, while 2 sums up the totals and finds the average that way. Option 2 is more accurate because of this.
 
 ## 3. Before & After Analysis
 This technique is usually used when we inspect an important event and want to inspect the impact before and after a certain point in time.
