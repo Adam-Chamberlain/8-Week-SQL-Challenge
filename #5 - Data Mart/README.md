@@ -45,15 +45,59 @@ FROM (
 
 To clean the `week_date` column, I used a CONCAT to rearrange it. Since the length of the strings were inconsistent, I used CASE statements to identify how many numbers were in the month and date by finding where the slashes were, and I pulled specific characters from those results.
 
+For all future questions, I use this cleaned data as a CTE named `clean`.
+
 ![image](https://github.com/user-attachments/assets/32ab7187-216a-494e-a3ba-caa35e261fd3)
 
 
 ## 2. Data Exploration
 ### 1. What day of the week is used for each week_date value?
 ### 2. What range of week numbers are missing from the dataset?
+
+```
+SELECT DISTINCT
+WEEKDAY(week_date) AS wkday
+FROM clean
+```
+This only returns the value 0, meaning it is only showing Mondays. The dates with numbers 1-6 (Tuesday through Sunday) is missing.
+
 ### 3. How many total transactions were there for each year in the dataset?
+
+```
+SELECT
+calendar_year,
+SUM(transactions) AS count
+FROM clean
+GROUP BY calendar_year
+```
+![image](https://github.com/user-attachments/assets/70aa369a-e715-4da1-aab1-238cfcedf7d5)
+
 ### 4. What is the total sales for each region for each month?
+
+```
+SELECT
+month_number,
+region,
+SUM(sales) AS total_sales
+FROM clean
+GROUP BY region, month_number
+ORDER BY month_number, region
+```
+The data goes from March (3) to September (9) in years 2018 to 2020, but 2020 only goes to August. The image just shows the first few months.
+
+![image](https://github.com/user-attachments/assets/ceab6f1f-1282-42d3-95eb-3ae6d29ab82b)
+
 ### 5. What is the total count of transactions for each platform
+
+```
+SELECT
+platform,
+SUM(transactions) AS total_transactions
+FROM clean
+GROUP BY platform
+```
+![image](https://github.com/user-attachments/assets/2b33410a-516c-464c-b47b-df7595a59616)
+
 ### 6. What is the percentage of sales for Retail vs Shopify for each month?
 ### 7. What is the percentage of sales by demographic for each year in the dataset?
 ### 8. Which age_band and demographic values contribute the most to Retail sales?
