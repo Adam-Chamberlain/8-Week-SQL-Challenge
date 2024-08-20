@@ -1,5 +1,7 @@
 # [Case Study #5: Data Mart](https://8weeksqlchallenge.com/case-study-5/)
 
+This case study looks at an online supermarket that has data from 2018 through 2020 within one large table. The table needs to be cleaned quite a bit, and once that is done, there are many questions based on the contents of the data, especially with identifying how a business change that took place in June of 2020 affected sales.
+
 ## 1. Data Cleansing Steps
 In a single query, perform the following operations and generate a new table in the data_mart schema named clean_weekly_sales:
 
@@ -220,15 +222,95 @@ We would include all week_date values for 2020-06-15 as the start of the period 
 
 Using this analysis approach - answer the following questions:
 
-What is the total sales for the 4 weeks before and after 2020-06-15? What is the growth or reduction rate in actual values and percentage of sales?
-What about the entire 12 weeks before and after?
-How do the sale metrics for these 2 periods before and after compare with the previous years in 2018 and 2019?
-4. Bonus Question
+### 1. What is the total sales for the 4 weeks before and after 2020-06-15? What is the growth or reduction rate in actual values and percentage of sales?
+
+```
+data AS (
+SELECT
+SUM(CASE WHEN week_number BETWEEN 20 AND 23 THEN sales ELSE NULL END) AS before_change,
+SUM(CASE WHEN week_number BETWEEN 25 AND 28 THEN sales ELSE NULL END) AS after_change
+FROM clean
+WHERE calendar_year = 2020)
+
+SELECT
+after_change - before_change AS difference,
+ROUND(100 * (after_change - before_change) / before_change, 2) AS percent
+FROM data
+```
+The week of June 15 is Week 24, so for this, 20-23 are the four weeks before, and 25-28 are the four weeks after. I basically find the total number of sales for each periods and calculate the difference and percentage difference between the two.
+
+![image](https://github.com/user-attachments/assets/aeb56a6a-ae81-4062-bebf-b6c61cc3c4af)
+
+### 2. What about the entire 12 weeks before and after?
+
+```
+data AS (
+SELECT
+SUM(CASE WHEN week_number BETWEEN 12 AND 23 THEN sales ELSE NULL END) AS before_change,
+SUM(CASE WHEN week_number BETWEEN 25 AND 36 THEN sales ELSE NULL END) AS after_change
+FROM clean
+WHERE calendar_year = 2020)
+
+SELECT
+after_change - before_change AS difference,
+ROUND(100 * (after_change - before_change) / before_change, 2) AS percent
+FROM data
+```
+I used the same query with different week ranges to answer this question. There is a much larger difference in these two ranges.
+
+![image](https://github.com/user-attachments/assets/52afdc6c-d696-4d26-a186-bb59b42c0841)
+
+### 3. How do the sale metrics for these 2 periods before and after compare with the previous years in 2018 and 2019?
+
+Again I used a similar query, but instead of `WHERE calendar_year = 2020` I added `calendar_year` as a column and grouped the sums by each year. There is a large drop in sales each year when looking at 12 weeks before and after, but it has grown by roughly 2% each year. Looking at 4 weeks before and after, 2020 was the first year it went in the negative.
+
+**4 weeks Before and After**
+
+![image](https://github.com/user-attachments/assets/beded384-b5d6-451f-bb27-520fc604ff0e)
+
+**12 weeks Before and After**
+
+![image](https://github.com/user-attachments/assets/01c0ddb1-04d3-468e-8c67-0f3ca576f843)
+
+## 4. Bonus Question
 Which areas of the business have the highest negative impact in sales metrics performance in 2020 for the 12 week before and after period?
 
-region
-platform
-age_band
-demographic
-customer_type
-Do you have any further recommendations for Danny’s team at Data Mart or any interesting insights based off this analysis?
+```
+data AS (
+SELECT
+region,
+SUM(CASE WHEN week_number BETWEEN 12 AND 23 THEN sales ELSE NULL END) AS before_change,
+SUM(CASE WHEN week_number BETWEEN 25 AND 36 THEN sales ELSE NULL END) AS after_change
+FROM clean
+WHERE calendar_year = 2020
+GROUP BY region)
+
+SELECT
+region,
+after_change - before_change AS difference,
+ROUND(100 * (after_change - before_change) / before_change, 2) AS percent
+FROM data
+ORDER BY difference
+```
+Here, I use the same base query for each area, with the `region` column being swapped out for various columns. 
+
+- region
+
+![image](https://github.com/user-attachments/assets/4c9cdf4d-cd3c-4c13-84c1-fb9724a50776)
+
+- platform
+
+![image](https://github.com/user-attachments/assets/0f3af52d-70c9-474c-aee1-36fac7bd2b5e)
+
+- age_band
+
+![image](https://github.com/user-attachments/assets/177cfa20-84e0-4137-bf93-501605bcf391)
+
+- demographic
+
+![image](https://github.com/user-attachments/assets/c725a0a8-5ced-434e-a4f1-67c845992a65)
+
+- customer_type
+
+![image](https://github.com/user-attachments/assets/0d6a1c08-ec39-452a-bd01-2093534df61f)
+
