@@ -50,13 +50,133 @@ With the following code, I was able to create this entity relationship diagram u
 ## 2. Digital Analysis
 
 ### 1. How many users are there?
+
+```
+SELECT
+COUNT(DISTINCT user_id) AS usercount
+FROM users
+```
+![image](https://github.com/user-attachments/assets/48ee27ea-423d-4b6e-af1a-b4d203c1ab29)
+
 ### 2. How many cookies does each user have on average?
+
+```
+SELECT
+COUNT(cookie_id) / COUNT(DISTINCT user_id) AS average
+FROM users
+```
+This counts the total amount of rows with cookies and divides it by the unique number of user IDs to get the average.
+
+![image](https://github.com/user-attachments/assets/0a090fb8-ed03-46ca-9855-1c4411c25064)
+
 ### 3. What is the unique number of visits by all users per month?
+
+```
+SELECT
+MONTH(event_time) AS month,
+COUNT(DISTINCT visit_id) AS visits
+FROM events
+GROUP BY month
+ORDER BY month
+```
+Each visit ID adds a new row when a new page is viewed, so it needs to show distinct visit IDs for this to work accurately. 
+
+![image](https://github.com/user-attachments/assets/380712f6-eb66-467a-8d58-c74ea3ad03aa)
+
 ### 4. What is the number of events for each event type?
+
+```
+SELECT
+e.event_type,
+event_name,
+COUNT(e.event_type) AS amount
+FROM events e
+JOIN event_identifier ei
+ON e.event_type = ei.event_type
+GROUP BY e.event_type, event_name
+```
+![image](https://github.com/user-attachments/assets/3cfdcbc8-b7e0-46ea-8f6c-950082064653)
+
 ### 5. What is the percentage of visits which have a purchase event?
+
+```
+SELECT
+  ROUND((SELECT COUNT(DISTINCT visit_id) FROM events WHERE event_type = 3)
+  / COUNT(DISTINCT visit_id), 2) AS percent
+FROM events
+```
+This uses a subquery to find how many unique visit IDs have a purchase event (the value 3), which is then divided by the total amount of unique visits to get the percentage.
+
+![image](https://github.com/user-attachments/assets/4f05745c-babd-408b-81d4-73057e7ca1ec)
+
 ### 6. What is the percentage of visits which view the checkout page but do not have a purchase event?
+
+```
+WITH cte AS (
+  SELECT
+    a.visit_id,
+    page_id,
+    event_type
+  FROM(
+    SELECT
+      DISTINCT visit_id,
+      page_id
+    FROM events
+    WHERE page_id = 12) a
+  LEFT JOIN(
+    SELECT
+      DISTINCT visit_id,
+      event_type
+    FROM events
+    WHERE event_type = 3) b
+  ON a.visit_id = b.visit_id)
+
+SELECT
+  (SELECT COUNT(visit_id) FROM cte WHERE event_type IS NULL) / COUNT(DISTINCT visit_id) AS percentage
+FROM events
+```
+This CTE creates a table that JOINs the `events` table twice to show every unique visit ID that viewed the checkout page (12), whether or not they also purchased an item (3), as shown below:
+
+![image](https://github.com/user-attachments/assets/ad9615fc-316d-47ad-b939-16238ade0ace)
+
+The rows with NULL values in `event_type` are the ones that did not purchase an item but still viewed the checkout page at some point. I counted all the rows where the value was NULL and divided it by the total number of unique visit IDs to get the final percentage.
+
+![image](https://github.com/user-attachments/assets/641edf13-e5b5-40ec-8f37-86e0f0b125b6)
+
 ### 7. What are the top 3 pages by number of views?
+
+```
+SELECT
+  page_name,
+  COUNT(e.page_id) AS amount
+FROM events e
+JOIN page_hierarchy ph
+  ON e.page_id = ph.page_id
+WHERE e.event_type = 1
+GROUP BY page_name
+ORDER BY amount DESC
+LIMIT 3
+```
+`event_type` has to equal 1 (page view) since the question is asking for number of views only.
+
+![image](https://github.com/user-attachments/assets/45b51dad-45fd-4d2c-91e4-dc2764385efb)
+
 ### 8. What is the number of views and cart adds for each product category?
+
+```
+SELECT
+  product_category,
+  COUNT(CASE WHEN event_type = 1 THEN 1 ELSE NULL END) AS views,
+  COUNT(CASE WHEN event_type = 2 THEN 1 ELSE NULL END) AS cart_adds
+FROM events e
+JOIN page_hierarchy ph
+  ON e.page_id = ph.page_id
+WHERE product_category IS NOT NULL
+GROUP BY product_category
+ORDER BY views DESC
+```
+![image](https://github.com/user-attachments/assets/bbd885c5-dfea-456b-bfc3-113974d0750c)
+
 ### 9. What are the top 3 products by purchases?
 
 ## 3. Product Funnel Analysis
