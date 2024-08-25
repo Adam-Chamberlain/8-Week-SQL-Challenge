@@ -1,4 +1,4 @@
-# [Case Study 6: Clique Bait](https://8weeksqlchallenge.com/case-study-6/)
+![image](https://github.com/user-attachments/assets/3f730740-ebb7-46cd-94a4-2ce24746667e)# [Case Study 6: Clique Bait](https://8weeksqlchallenge.com/case-study-6/)
 
 ## 1. Enterprise Relationship Diagram
 Using the following DDL schema details to create an ERD for all the Clique Bait datasets.
@@ -179,6 +179,44 @@ ORDER BY views DESC
 
 ### 9. What are the top 3 products by purchases?
 
+```
+WITH cte AS (SELECT
+    a.visit_id,
+    a.page_id AS purchases,
+    b.page_id AS checkout
+  FROM(
+    SELECT
+      DISTINCT visit_id,
+      page_id
+    FROM events
+    WHERE event_type = 2) a
+  LEFT JOIN(
+    SELECT
+      DISTINCT visit_id,
+      page_id
+    FROM events
+    WHERE page_id = 13) b
+  ON a.visit_id = b.visit_id
+  WHERE b.page_id IS NOT NULL)
+  
+SELECT
+  page_name,
+  COUNT(purchases) AS amount
+FROM cte c
+JOIN page_hierarchy ph
+  ON c.purchases = ph.page_id
+GROUP BY page_name
+ORDER BY amount DESC
+ LIMIT 3
+```
+The first subquery pulls all purchases (instances where `event_type` is 2) and the second subquery pulls all instances where the user checked out and actually purchased the items (where `page_id` is 13. The two subqueries are joined together using a left join to show all purchases, regardless of if they checked out or not. If they did not check out, the `checkout` column would show NULL, which is filtered out with the WHERE clause at the end.
+
+![image](https://github.com/user-attachments/assets/3408aadd-eefe-4644-b514-3ed4118db22b)
+
+Finally, the purchases are grouped by the name of the page.
+
+![image](https://github.com/user-attachments/assets/213d7509-df19-406b-910d-e60f80dd34ca)
+
 ## 3. Product Funnel Analysis
 
 Using a single SQL query - create a new output table which has the following details:
@@ -188,15 +226,147 @@ Using a single SQL query - create a new output table which has the following det
 - How many times was each product added to a cart but not purchased (abandoned)?
 - How many times was each product purchased?
 
-Additionally, create another table which further aggregates the data for the above points but this time for each product category instead of individual products.
+```
+WITH purchases AS (SELECT
+    a.visit_id,
+    a.page_id AS purchases,
+    CASE WHEN b.page_id IS NOT NULL THEN 1 ELSE 0 END AS checkout
+  FROM(
+    SELECT
+      DISTINCT visit_id,
+      page_id
+    FROM events
+    WHERE event_type = 2) a
+  LEFT JOIN(
+    SELECT
+      DISTINCT visit_id,
+      page_id
+    FROM events
+    WHERE page_id = 13) b
+  ON a.visit_id = b.visit_id),
+  
+viewed AS (
+  SELECT
+  page_id,
+  COUNT(page_id) AS views
+  FROM events
+  WHERE event_type = 1 AND page_id NOT IN(1,2,12,13)
+  GROUP BY page_id),
+  
+cart AS (
+  SELECT
+  page_id,
+  COUNT(page_id) AS in_cart
+  FROM events
+  WHERE event_type = 2
+  GROUP BY page_id)
+  
+SELECT
+  page_name,
+  views,
+  in_cart,
+  SUM(checkout) AS purchased,
+  SUM(CASE WHEN checkout = 1 THEN 0 ELSE 1 END) AS not_purchased
+FROM purchases p
+JOIN page_hierarchy ph
+  ON p.purchases = ph.page_id
+  JOIN viewed v
+ON p.purchases = v.page_id
+  JOIN cart ca
+ON p.purchases = ca.page_id
+GROUP BY page_name, views, in_cart
+```
+The `purchases` CTE works similarly to the one in the prior question to identify which products were purchased. Purchases are given the value 1, and ones that were not purchased are given 0. To get the total amount that was not purchased, I used a CASE statement to invert these numbers.
+
+The other two CTEs show the amount of times each product was viewed or added to the cart. They were then joined with the other CTE to put it all together. I saved this table as the name `products`.
+
+![image](https://github.com/user-attachments/assets/3e34f123-66cf-4eb4-b2ef-6fff9147f1ec)
+
+### Additionally, create another table which further aggregates the data for the above points but this time for each product category instead of individual products.
+
+```
+combined AS (
+SELECT
+product_category,
+SUM(views) AS views,
+SUM(in_cart) AS in_cart
+FROM viewed v
+JOIN cart c
+ON v.page_id = c.page_id
+JOIN page_hierarchy ph
+ON v.page_id = ph.page_id
+GROUP BY product_category)
+  
+SELECT
+  ph.product_category,
+  views,
+  in_cart,
+  SUM(checkout) AS purchased,
+  SUM(CASE WHEN checkout = 1 THEN 0 ELSE 1 END) AS not_purchased
+FROM purchases p
+JOIN page_hierarchy ph
+  ON p.purchases = ph.page_id
+  JOIN combined c
+  ON ph.product_category = c.product_category
+GROUP BY product_category, views, in_cart
+```
+To do this, I added one more CTE called `combined` to combine the `views` and `in_cart` columns and convert them to product categories. With that, I used a similar final query. I saved this table as `categories`.
+
+![image](https://github.com/user-attachments/assets/2dc78f93-31f9-45b7-86e3-544d71204b0f)
 
 Use your 2 new output tables - answer the following questions:
 
-1. Which product had the most views, cart adds and purchases?
-2. Which product was most likely to be abandoned?
-3. Which product had the highest view to purchase percentage?
-4. What is the average conversion rate from view to cart add?
-5. What is the average conversion rate from cart add to purchase?
+### 1. Which product had the most views, cart adds and purchases?
+
+Views: Oyster. Cart Adds: Lobster. Purchases: Lobster.
+
+### 2. Which product was most likely to be abandoned?
+
+```
+SELECT
+page_name,
+not_purchased / in_cart AS percent
+FROM products
+ORDER BY percent
+```
+I divided the amount that were in the cart but not purchased by the total amount in the cart to see the percent of each product that did not get purchased. Russian Caviar is the most likely to be abandoned.
+
+![image](https://github.com/user-attachments/assets/59f115f8-c10a-4d94-ac2d-c71fef2c796e)
+
+### 3. Which product had the highest view to purchase percentage?
+
+```
+SELECT
+page_name,
+purchased / views AS ratio
+FROM products
+ORDER BY ratio DESC
+```
+Similar to the prior question, I divided the amount of purchases by the amount of views. Lobster has the highest view-to-purchase percentage.
+
+![image](https://github.com/user-attachments/assets/f7708951-127b-40dd-b67b-aefa692367b5)
+
+### 4. What is the average conversion rate from view to cart add?
+
+```
+SELECT
+page_name,
+in_cart / views AS ratio
+FROM products
+ORDER BY ratio DESC
+```
+![image](https://github.com/user-attachments/assets/32dd1ffe-6103-41e9-b708-c9cb1aff620f)
+
+### 5. What is the average conversion rate from cart add to purchase?
+
+```
+SELECT
+page_name,
+purchased / in_cart AS ratio
+FROM products
+ORDER BY ratio DESC
+```
+![image](https://github.com/user-attachments/assets/8d091239-2329-4acc-9795-a5269f7fa52e)
 
 ### 4. Campaigns Analysis
 
