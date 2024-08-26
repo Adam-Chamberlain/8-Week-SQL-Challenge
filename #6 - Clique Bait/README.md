@@ -1,4 +1,6 @@
-![image](https://github.com/user-attachments/assets/3f730740-ebb7-46cd-94a4-2ce24746667e)# [Case Study 6: Clique Bait](https://8weeksqlchallenge.com/case-study-6/)
+# [Case Study 6: Clique Bait](https://8weeksqlchallenge.com/case-study-6/)
+
+This case study looks at website and visit data for an online seafood seller. Lots of information is provided, including individual steps that are taken during each individual user's visit to the website. There are five initial tables, which are shown in the first question:
 
 ## 1. Enterprise Relationship Diagram
 Using the following DDL schema details to create an ERD for all the Clique Bait datasets.
@@ -383,11 +385,42 @@ Generate a table that has 1 single row for every unique visit_id record and has 
 - click: count of ad clicks for each visit
 - (Optional column) cart_products: a comma separated text value with products added to the cart sorted by the order they were added to the cart (hint: use the sequence_number)
 
-Use the subsequent dataset to generate at least 5 insights for the Clique Bait team - bonus: prepare a single A4 infographic that the team can use for their management reporting sessions, be sure to emphasise the most important points from your findings.
+```
+WITH starttime AS (
+SELECT
+visit_id,
+event_time
+FROM events
+WHERE sequence_number = 1)
 
-Some ideas you might want to investigate further include:
+SELECT
+user_id,
+e.visit_id,
+st.event_time AS visit_start_time,
+SUM(CASE WHEN event_type = 1 THEN 1 ELSE 0 END) AS page_views,
+SUM(CASE WHEN event_type = 2 THEN 1 ELSE 0 END) AS cart_adds,
+SUM(CASE WHEN event_type = 3 THEN 1 ELSE 0 END) AS purchase,
+campaign_name,
+SUM(CASE WHEN event_type = 4 THEN 1 ELSE 0 END) AS impression,
+SUM(CASE WHEN event_type = 5 THEN 1 ELSE 0 END) AS click,
+GROUP_CONCAT(CASE WHEN event_type = 2 THEN page_name ELSE NULL END ORDER BY sequence_number SEPARATOR ', ') AS cart_products
+FROM events e
 
-- Identifying users who have received impressions during each campaign period and comparing each metric with other users who did not have an impression event
-- Does clicking on an impression lead to higher purchase rates?
-- What is the uplift in purchase rate when comparing users who click on a campaign impression versus users who do not receive an impression? What if we compare them with users who just an impression but do not click?
-- What metrics can you use to quantify the success or failure of each campaign compared to eachother?
+JOIN starttime st
+ON e.visit_id = st.visit_id
+
+LEFT JOIN users u
+ON e.cookie_id = u.cookie_id
+
+LEFT JOIN campaign_identifier ci
+ON e.event_time BETWEEN ci.start_date AND ci.end_date
+
+JOIN page_hierarchy ph
+ON e.page_id = ph.page_id
+
+GROUP BY e.visit_id, st.event_time, user_id, campaign_name
+ORDER BY user_id
+```
+I was able to add the `user_id` column by joining the table with the `users` table. I used a CTE to get the start time from each visit, which was also joined. To get the number of page views, cart adds, etc, I used CASE statements to count how many times each appeared per visit. To identify ongoing campaigns, I joined the `campaign_identifier` table with the start time to see if it is between the start and end date of any campaigns. This uses a LEFT JOIN, since some visits were not during campaigns, and they would not show otherwise. Lastly, I used a GROUP_CONCAT to list all cart adds in one column.
+
+![image](https://github.com/user-attachments/assets/1a2edcd1-ebd6-4df9-988a-97e68b129931)
