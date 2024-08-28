@@ -5,7 +5,7 @@ This case study looks at website and visit data for an online seafood seller. Lo
 ## 1. Enterprise Relationship Diagram
 Using the following DDL schema details to create an ERD for all the Clique Bait datasets.
 
-```
+```sql
 Table event_identifier {
   event_type integer
   event_name integer
@@ -53,7 +53,7 @@ With the following code, I was able to create this entity relationship diagram u
 
 ### 1. How many users are there?
 
-```
+```sql
 SELECT
 COUNT(DISTINCT user_id) AS usercount
 FROM users
@@ -62,7 +62,7 @@ FROM users
 
 ### 2. How many cookies does each user have on average?
 
-```
+```sql
 SELECT
 COUNT(cookie_id) / COUNT(DISTINCT user_id) AS average
 FROM users
@@ -73,7 +73,7 @@ This counts the total amount of rows with cookies and divides it by the unique n
 
 ### 3. What is the unique number of visits by all users per month?
 
-```
+```sql
 SELECT
 MONTH(event_time) AS month,
 COUNT(DISTINCT visit_id) AS visits
@@ -87,7 +87,7 @@ Each visit ID adds a new row when a new page is viewed, so it needs to show dist
 
 ### 4. What is the number of events for each event type?
 
-```
+```sql
 SELECT
 e.event_type,
 event_name,
@@ -101,7 +101,7 @@ GROUP BY e.event_type, event_name
 
 ### 5. What is the percentage of visits which have a purchase event?
 
-```
+```sql
 SELECT
   ROUND((SELECT COUNT(DISTINCT visit_id) FROM events WHERE event_type = 3)
   / COUNT(DISTINCT visit_id), 2) AS percent
@@ -113,7 +113,7 @@ This uses a subquery to find how many unique visit IDs have a purchase event (th
 
 ### 6. What is the percentage of visits which view the checkout page but do not have a purchase event?
 
-```
+```sql
 WITH cte AS (
   SELECT
     a.visit_id,
@@ -147,7 +147,7 @@ The rows with NULL values in `event_type` are the ones that did not purchase an 
 
 ### 7. What are the top 3 pages by number of views?
 
-```
+```sql
 SELECT
   page_name,
   COUNT(e.page_id) AS amount
@@ -165,7 +165,7 @@ LIMIT 3
 
 ### 8. What is the number of views and cart adds for each product category?
 
-```
+```sql
 SELECT
   product_category,
   COUNT(CASE WHEN event_type = 1 THEN 1 ELSE NULL END) AS views,
@@ -181,7 +181,7 @@ ORDER BY views DESC
 
 ### 9. What are the top 3 products by purchases?
 
-```
+```sql
 WITH cte AS (SELECT
     a.visit_id,
     a.page_id AS purchases,
@@ -228,7 +228,7 @@ Using a single SQL query - create a new output table which has the following det
 - How many times was each product added to a cart but not purchased (abandoned)?
 - How many times was each product purchased?
 
-```
+```sql
 WITH purchases AS (SELECT
     a.visit_id,
     a.page_id AS purchases,
@@ -286,7 +286,7 @@ The other two CTEs show the amount of times each product was viewed or added to 
 
 ### Additionally, create another table which further aggregates the data for the above points but this time for each product category instead of individual products.
 
-```
+```sql
 combined AS (
 SELECT
 product_category,
@@ -324,7 +324,7 @@ Views: Oyster. Cart Adds: Lobster. Purchases: Lobster.
 
 ### 2. Which product was most likely to be abandoned?
 
-```
+```sql
 SELECT
 page_name,
 not_purchased / in_cart AS percent
@@ -337,7 +337,7 @@ I divided the amount that were in the cart but not purchased by the total amount
 
 ### 3. Which product had the highest view to purchase percentage?
 
-```
+```sql
 SELECT
 page_name,
 purchased / views AS ratio
@@ -350,7 +350,7 @@ Similar to the prior question, I divided the amount of purchases by the amount o
 
 ### 4. What is the average conversion rate from view to cart add?
 
-```
+```sql
 SELECT
 page_name,
 in_cart / views AS ratio
@@ -361,7 +361,7 @@ ORDER BY ratio DESC
 
 ### 5. What is the average conversion rate from cart add to purchase?
 
-```
+```sql
 SELECT
 page_name,
 purchased / in_cart AS ratio
@@ -385,7 +385,7 @@ Generate a table that has 1 single row for every unique visit_id record and has 
 - click: count of ad clicks for each visit
 - (Optional column) cart_products: a comma separated text value with products added to the cart sorted by the order they were added to the cart (hint: use the sequence_number)
 
-```
+```sql
 WITH starttime AS (
 SELECT
 visit_id,
