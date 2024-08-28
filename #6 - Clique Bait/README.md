@@ -1,4 +1,4 @@
-# [Case Study 6: Clique Bait](https://8weeksqlchallenge.com/case-study-6/)
+# [Case Study #6: Clique Bait](https://8weeksqlchallenge.com/case-study-6/)
 
 This case study looks at website and visit data for an online seafood seller. Lots of information is provided, including individual steps that are taken during each individual user's visit to the website. There are five initial tables, which are shown in the first question:
 
