@@ -8,7 +8,7 @@ In this case study, a pizza delivery company wants to find information about spe
 ## A. Pizza Metrics
 ### 1. How many pizzas were ordered?
 
-```
+```sql
 SELECT
   COUNT(*) AS orders
 FROM pizza_runner.customer_orders;
@@ -21,7 +21,7 @@ The first question is pretty simple; I just count the amount of orders that took
 
 ### 2. How many unique customer orders were made?
 
-```
+```sql
 SELECT
   COUNT(DISTINCT order_id) AS unique_orders
 FROM pizza_runner.customer_orders
@@ -34,7 +34,7 @@ This uses the same query as the one above, but instead of counting all rows, it 
 
 ### 3. How many successful orders were delivered by each runner?
 
-```
+```sql
 WITH clean AS (
 SELECT
   *,
@@ -58,7 +58,7 @@ This one required some data cleaning beforehand. The null values in the `cancell
 
 ### 4. How many of each type of pizza was delivered?
 
-```
+```sql
 SELECT
   p.pizza_name,
   COUNT(c.pizza_id) AS amount
@@ -79,7 +79,7 @@ Again, this required some cleaning. I joined the `customer_orders` and `pizza_na
 
 ### 5. How many Vegetarian and Meatlovers were ordered by each customer?
 
-```
+```sql
 SELECT
   c.customer_id,
   p.pizza_name,
@@ -105,7 +105,7 @@ For this one, I simply had to count the amount of orders and group it by the cus
 
 ### 6. What was the maximum number of pizzas delivered in a single order?
 
-```
+```sql
 WITH clean AS (
 SELECT
   c.order_id
@@ -136,7 +136,7 @@ I first joined the necessary tables and pulled the relevant information with uns
 
 ### 7. For each customer, how many delivered pizzas had at least 1 change and how many had no changes?
 
-```
+```sql
 WITH clean AS (
 SELECT
   c.customer_id,
@@ -168,7 +168,7 @@ This one was a bit more complicated and required lots of cleaning. Like the `can
 
 ### 8. How many pizzas were delivered that had both exclusions and extras?
 
-```
+```sql
 WITH clean AS (
 SELECT
   c.customer_id,
@@ -192,7 +192,7 @@ This one just required a few changes from the last one. Instead of using OR in t
 
 ### 9. What was the total volume of pizzas ordered for each hour of the day?
 
-```
+```sql
 SELECT 
   EXTRACT(HOUR FROM order_time) AS hour,
   COUNT(order_id) AS amount
@@ -213,7 +213,7 @@ For this, the hour of the day is extracted from the order time, and with that, i
 
 ### 10. What was the volume of orders for each day of the week?
 
-```
+```sql
 WITH clean AS (
 SELECT 
   EXTRACT(isodow FROM order_time) AS day,
@@ -245,7 +245,7 @@ Here, "isodow" is extracted from `order_time`, which is the day of the week (1 =
 ## B. Runner and Customer Experience
 ### 1. How many runners signed up for each 1 week period? (i.e. week starts 2021-01-01)
 
-```
+```sql
 SELECT
   CASE WHEN registration_date BETWEEN '2021-01-01' AND '2021-01-07' THEN 'Week 1: 1/1-1/7'
   WHEN registration_date BETWEEN '2021-01-08' AND '2021-01-14' THEN 'Week 2: 1/8-1/14'
@@ -265,7 +265,7 @@ I had to use a CASE statement to number each week period. If I used EXTRACT(WEEK
 
 ### 2. What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pickup the order?
 
-```
+```sql
 WITH clean AS (
 SELECT
   r.runner_id,
@@ -291,7 +291,7 @@ This took a lot of cleaning yet again; the `pickup_time` had "null" text and was
 
 ### 3. Is there any relationship between the number of pizzas and how long the order takes to prepare?
 
-```
+```sql
 WITH clean AS (
 SELECT
   c.order_id,
@@ -326,7 +326,7 @@ For this one, I used the same CTE to pull relevant cleaned information, the only
 
 ### 4. What was the average distance travelled for each customer?
 
-```
+```sql
 WITH clean AS(
 SELECT
   DISTINCT c.order_id,
@@ -357,7 +357,7 @@ The `distance` column had inconsistencies with how the data was inputted, so it 
 
 ### 5. What was the difference between the longest and shortest delivery times for all orders?
 
-```
+```sql
 WITH clean AS (
 SELECT
   CAST(CASE WHEN duration LIKE '%minutes' THEN TRIM('minutes' FROM duration)
@@ -378,7 +378,7 @@ The `duration` tab needed a lot of cleaning, as it was a mix of just numbers, x 
 
 ### 6. What was the average speed for each runner for each delivery and do you notice any trend for these values?
 
-```
+```sql
 WITH clean AS(
   SELECT
   runner_id,
@@ -412,7 +412,7 @@ The CTE cleaned up the `distance` and `duration` columns, removing inconsistanci
 
 ### 7. What is the successful delivery percentage for each runner?
 
-```
+```sql
 WITH clean AS (
 SELECT
   runner_id,
@@ -437,7 +437,7 @@ The CTE basically flips all of the contents of the `cancellation` column, making
 ## C. Ingredient Optimization
 ### 1. What are the standard ingredients for each pizza?
 
-```
+```sql
 WITH clean AS (
 SELECT
   pn.pizza_name,
@@ -475,7 +475,7 @@ Since the pizza ingredients are all in one column and separated by commas, they 
 
 ### 2. What was the most commonly added extra?
 
-```
+```sql
 WITH clean AS (
 SELECT
   order_id,
@@ -507,7 +507,7 @@ Since this required lots of cleaning, I used two CTEs. The first one fixes all t
 
 ### 3. What was the most common exclusion?
 
-```
+```sql
 WITH clean AS (
 SELECT
   order_id,
@@ -543,7 +543,7 @@ This uses the exact same queries as the prior question but with the first two qu
 - Meat Lovers - Extra Bacon
 - Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
 
-```
+```sql
 WITH clean AS (
 SELECT
   ROW_NUMBER() OVER() AS row,
@@ -616,7 +616,7 @@ This took a LOT of CTE tables, but it works!
 ### 5. Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients
 - For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
 
-```
+```sql
 WITH clean AS (
 SELECT
   ROW_NUMBER() OVER() AS row,
@@ -691,7 +691,7 @@ This one was quite complicated, and I did use some outside help for the subqueri
 
 ### 6. What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
 
-```
+```sql
 WITH clean AS (SELECT
   ROW_NUMBER() OVER() AS row,
   co.order_id,
@@ -750,7 +750,7 @@ This was pretty tricky and I honestly had to get some outside help for the subqu
 ## D. Pricing and Ratings
 ### 1. If a Meat Lovers pizza costs $12 and Vegetarian costs $10 and there were no charges for changes - how much money has Pizza Runner made so far if there are no delivery fees?
 
-```
+```sql
 SELECT
   SUM(CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 12
   WHEN pn.pizza_name LIKE 'Vegetarian' THEN 10 ELSE 0 END) AS total
@@ -770,7 +770,7 @@ Pretty simple query. If an order is 'Meatlovers' it assigns $12 to the total col
 ### 2. What if there was an additional $1 charge for any pizza extras?
 - Add cheese is $1 extra
 
-```
+```sql
 WITH prices AS (
 SELECT
   SUM(CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 12
@@ -803,7 +803,7 @@ This uses two CTE tables - the first one is just like the prior question and gra
 
 ### 3. The Pizza Runner team now wants to add an additional ratings system that allows customers to rate their runner, how would you design an additional table for this new dataset - generate a schema for this new table and insert your own data for ratings for each successful customer order between 1 to 5.
 
-```
+```sql
 DROP TABLE IF EXISTS ratings;
 CREATE TABLE ratings (
   "order_id" INTEGER,
@@ -846,7 +846,7 @@ To do this, I simply created the `ratings` table using `order_id` and `rating` a
 - Average speed
 - Total number of pizzas
 
-```
+```sql
 WITH clean AS (
 SELECT
   order_id,
@@ -896,7 +896,7 @@ The CTE cleans the `runner_orders` table, and the rest of the information is pul
 
 ### 5. If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
 
-```
+```sql
 WITH pizza_price AS (SELECT
   SUM(CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 12
   WHEN pn.pizza_name LIKE 'Vegetarian' THEN 10 ELSE 0 END) AS total
@@ -922,7 +922,7 @@ The CTE uses the same query as question 1 to find the amount made from successfu
 ## E. Bonus Questions
 ### If Danny wants to expand his range of pizzas - how would this impact the existing data design? Write an INSERT statement to demonstrate what would happen if a new Supreme pizza with all the toppings was added to the Pizza Runner menu?
 
-```
+```sql
 INSERT INTO pizza_runner.pizza_names
   ("pizza_id", "pizza_name")
 VALUES
