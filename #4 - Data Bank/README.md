@@ -9,7 +9,7 @@ This case study looks at a digital bank that stores money as well as data. Custo
 ## A. Customer Nodes Exploration
 ### 1. How many unique nodes are there on the Data Bank system?
 
-```
+```sql
 SELECT
   COUNT(DISTINCT node_id) AS node_count
 FROM customer_nodes
@@ -20,7 +20,7 @@ FROM customer_nodes
 
 ### 2.What is the number of nodes per region?
 
-```
+```sql
 SELECT
 region_name,
 COUNT(DISTINCT node_id) AS nodes
@@ -40,7 +40,7 @@ GROUP BY region_name
 
 ### 3. How many customers are allocated to each region?
 
-```
+```sql
 SELECT
 region_name,
 COUNT(customer_id) AS customers
@@ -61,7 +61,7 @@ ORDER BY region_name
 
 ### 4. How many days on average are customers reallocated to a different node?
 
-```
+```sql
 WITH cte AS ( SELECT
 customer_id,
 node_id,
@@ -81,7 +81,7 @@ FROM cte
 
 ### 5. What is the median, 80th and 95th percentile for this same reallocation days metric for each region?
 
-```
+```sql
 WITH cte AS (SELECT
 ROW_NUMBER() OVER() AS rownumber,
 customer_id,
@@ -110,7 +110,7 @@ For the percentile values, the final WHERE clause can be changed like this:
 ## B. Customer Transactions
 ### 1. What is the unique count and total amount for each transaction type?
 
-```
+```sql
 SELECT
 txn_type,
 COUNT(txn_type) AS amount
@@ -126,7 +126,7 @@ GROUP BY txn_type
 
 ### 2. What is the average total historical deposit counts and amounts for all customers?
 
-```
+```sql
 WITH cte AS (
 SELECT
   customer_id,
@@ -148,7 +148,7 @@ FROM cte
 
 ### 3. For each month - how many Data Bank customers make more than 1 deposit and either 1 purchase or 1 withdrawal in a single month?
 
-```
+```sql
 WITH cte AS (SELECT
 MONTH(txn_date) AS monthnum,
 customer_id,
@@ -177,7 +177,7 @@ This separates deposits, purchases, and withdrawals to separate columns so that 
 
 ### 4. What is the closing balance for each customer at the end of the month?
 
-```
+```sql
 CREATE TABLE temp_table (
 num INT PRIMARY KEY,
 monthdate DATE);
@@ -193,7 +193,7 @@ VALUES
 
 I first created a table to identify end dates and create a row for each month for each customer id, even if they did not have any transactions in a specific month. With this, I used many CTE tables to complete this question.
 
-```
+```sql
 WITH cte AS (
 SELECT
   customer_id,
@@ -206,7 +206,7 @@ ORDER BY customer_id, monthnum),
 ```
 This CTE pulls the total for each customer in each month they made transactions. Months where they did not make transactions are not included yet.
 
-```
+```sql
 alldates AS (
 SELECT DISTINCT
   customer_id,
@@ -221,7 +221,7 @@ This merges the prior CTE with the temporary table to create the below table. Al
 
 ![image](https://github.com/user-attachments/assets/a64a6bee-c6ea-4d01-9e53-acf1ef74d825)
 
-```
+```sql
 clean AS (
 SELECT
   ad.customer_id,
@@ -241,7 +241,7 @@ This CTE does lots of things. First, it joins the two prior CTEs to get an accur
 
 ![image](https://github.com/user-attachments/assets/fd02defe-c7bf-4020-9fc5-9bda6e750a58)
 
-```
+```sql
 SELECT DISTINCT
   customer_id,
   end_month,
@@ -255,7 +255,7 @@ Finally, duplicate values are filtered out so that each customer only has one ro
 
 ### 5. What is the percentage of customers who increase their closing balance by more than 5%?
 
-```
+```sql
 final AS (SELECT DISTINCT
   a.customer_id,
   a.end_balance AS jan,
