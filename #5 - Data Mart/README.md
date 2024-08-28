@@ -14,7 +14,7 @@ In a single query, perform the following operations and generate a new table in 
 - Ensure all null string values with an "unknown" string value in the original segment column as well as the new age_band and demographic columns
 - Generate a new avg_transaction column as the sales value divided by transactions rounded to 2 decimal places for each record
 
-```
+```sql
 SELECT
   clean_date AS week_date,
   WEEK(clean_date) AS week_number,
@@ -56,7 +56,7 @@ For all future questions, I use this cleaned data as a CTE named `clean`.
 ### 1. What day of the week is used for each week_date value?
 ### 2. What range of week numbers are missing from the dataset?
 
-```
+```sql
 SELECT DISTINCT
 WEEKDAY(week_date) AS wkday
 FROM clean
@@ -65,7 +65,7 @@ This only returns the value 0, meaning it is only showing Mondays. The dates wit
 
 ### 3. How many total transactions were there for each year in the dataset?
 
-```
+```sql
 SELECT
 calendar_year,
 SUM(transactions) AS count
@@ -76,7 +76,7 @@ GROUP BY calendar_year
 
 ### 4. What is the total sales for each region for each month?
 
-```
+```sql
 SELECT
 month_number,
 region,
@@ -91,7 +91,7 @@ The data goes from March (3) to September (9) in years 2018 to 2020, but 2020 on
 
 ### 5. What is the total count of transactions for each platform
 
-```
+```sql
 SELECT
 platform,
 SUM(transactions) AS total_transactions
@@ -102,7 +102,7 @@ GROUP BY platform
 
 ### 6. What is the percentage of sales for Retail vs Shopify for each month?
 
-```
+```sql
 cte AS (
   SELECT
     c.calendar_year,
@@ -145,7 +145,7 @@ This CTE pulls sales data from each month in each year within each platform and 
 
 ### 7. What is the percentage of sales by demographic for each year in the dataset?
 
-```
+```sql
 cte AS (
   SELECT
     cl.calendar_year,
@@ -185,7 +185,7 @@ I used a similar solution to question 6 for this one. I also calculated the perc
 
 ### 8. Which age_band and demographic values contribute the most to Retail sales?
 
-```
+```sql
 SELECT
 age_band,
 demographic,
@@ -199,7 +199,7 @@ ORDER BY total DESC
 
 ### 9. Can we use the avg_transaction column to find the average transaction size for each year for Retail vs Shopify? If not - how would you calculate it instead?
 
-```
+```sql
 SELECT
 calendar_year,
 platform,
@@ -224,7 +224,7 @@ Using this analysis approach - answer the following questions:
 
 ### 1. What is the total sales for the 4 weeks before and after 2020-06-15? What is the growth or reduction rate in actual values and percentage of sales?
 
-```
+```sql
 data AS (
 SELECT
 SUM(CASE WHEN week_number BETWEEN 20 AND 23 THEN sales ELSE NULL END) AS before_change,
@@ -243,7 +243,7 @@ The week of June 15 is Week 24, so for this, 20-23 are the four weeks before, an
 
 ### 2. What about the entire 12 weeks before and after?
 
-```
+```sql
 data AS (
 SELECT
 SUM(CASE WHEN week_number BETWEEN 12 AND 23 THEN sales ELSE NULL END) AS before_change,
@@ -275,7 +275,7 @@ Again I used a similar query, but instead of `WHERE calendar_year = 2020` I adde
 ## 4. Bonus Question
 Which areas of the business have the highest negative impact in sales metrics performance in 2020 for the 12 week before and after period?
 
-```
+```sql
 data AS (
 SELECT
 region,
