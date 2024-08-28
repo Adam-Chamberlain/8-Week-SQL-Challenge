@@ -7,7 +7,7 @@ In this case study, a restaurant has provided various data on its customers, sal
 
 ### 1. What is the total amount each customer spent at the restaurant?
 
-```
+```sql
 SELECT
   s.customer_id,
   SUM(m.price) AS total
@@ -16,7 +16,7 @@ JOIN dannys_diner.menu m
   ON s.product_id = m.product_id
 GROUP BY customer_id
 ORDER BY customer_id;
-```
+````
 To solve this question, I first used JOIN to pull relevant data from both the `sales` and `menu` tables. I then found the sum of the price of all orders and grouped it by `customer_id` to show the sum of the amounts each customer spent.
 
 | customer_id | total |
@@ -27,7 +27,7 @@ To solve this question, I first used JOIN to pull relevant data from both the `s
 
 ### 2. How many days has each customer visited the restaurant?
 
-```
+```sql
 SELECT
   customer_id,
   COUNT(DISTINCT order_date) AS days_visited
@@ -45,7 +45,7 @@ This question just required the `sales` table. Since `order_date` only showed th
 
 ### 3. What was the first item from the menu purchased by each customer?
 
-```
+```sql
 WITH ranked AS
 SELECT DISTINCT
   s.customer_id,
@@ -76,7 +76,7 @@ Customer A visited twice on January 1, buying both curry and sushi. It is unclea
 
 ### 4. What is the most purchased item on the menu and how many times was it purchased by all customers?
 
-```
+```sql
 SELECT
   m.product_name,
   COUNT(s.product_id) AS amount
@@ -96,7 +96,7 @@ This query joins the `sales` and `menu` tables, counts the number of each produc
 
 ### 5. Which item was the most popular for each customer?
 
-```
+```sql
 WITH ranked AS (
 SELECT
   s.customer_id,
@@ -129,7 +129,7 @@ A and C's favorite product is ramen, which they each bought 3 times. B has a 3-w
 
 ### 6. Which item was purchased first by the customer after they became a member?
 
-```
+```sql
 WITH clean AS (
 SELECT
     s.customer_id,
@@ -165,7 +165,7 @@ Customer A's first purchase after becoming a member was ramen, and customer B's 
 
 ### 7. Which item was purchased just before the customer became a member?
 
-```
+```sql
 WITH clean AS (
 SELECT
     s.customer_id,
@@ -202,7 +202,7 @@ Customer A ordered both sushi and curry on the same day, though it is unsure whi
 
 ### 8. What is the total items and amount spent for each member before they became a member?
 
-```
+```sql
 WITH before AS(
 SELECT
     s.customer_id,
@@ -233,7 +233,7 @@ Again, this uses a CTE called `before` to only pull the orders that took place b
 
 ### 9. If each $1 spent equates to 10 points and sushi has a 2x points multiplier - how many points would each customer have?
 
-```
+```sql
 WITH point_calc AS (
 SELECT
     s.customer_id,
@@ -261,7 +261,7 @@ Here, a CASE statement is used to find the accurate amount of points per product
 
 ### 10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
 
-```
+```sql
 WITH point_calc AS (
 SELECT
     s.customer_id,
@@ -318,7 +318,7 @@ For this question, I had to recreate the table below:
 
 I did so using the following query:
 
-```
+```sql
 SELECT
     s.customer_id,
     s.order_date,
@@ -359,7 +359,7 @@ For this question, I had to recreate the table below:
 
 I did so using the following query:
 
-```
+```sql
 WITH cte AS (
 SELECT
     s.customer_id,
