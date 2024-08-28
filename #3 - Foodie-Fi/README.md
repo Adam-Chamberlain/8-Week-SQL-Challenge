@@ -10,7 +10,7 @@ Since there were many more rows of data in this case study, I decided to use MyS
 ## A. Customer Journey
 ### Based off the 8 sample customers provided in the sample from the subscriptions table, write a brief description about each customer’s onboarding journey. Try to keep it as short as possible - you may also want to run some sort of join to make your explanations a bit easier!
 
-```
+```sql
 SELECT
   s.customer_id,
   s.start_date,
@@ -58,12 +58,12 @@ The samples shown on the case study website are customers with the IDs 1, 2, 11,
 
 ## B. Data Analysis Questions
 ### 1. How many customers has Foodie-Fi ever had?
-```
+
+```sql
 SELECT
   COUNT(DISTINCT customer_id) AS count
 FROM subscriptions
 ```
-Pretty straightforward; for this, all that is needed is to count the number of distinct customer IDs.
 
 |count|
 |-----|
@@ -71,7 +71,7 @@ Pretty straightforward; for this, all that is needed is to count the number of d
 
 ### 2. What is the monthly distribution of trial plan start_date values for our dataset - use the start of the month as the group by value
 
-```
+```sql
 SELECT
   MONTH(start_date) AS month,
   MONTHNAME(start_date) AS month_name,
@@ -101,7 +101,7 @@ Basically, I used a CASE statement to count instances where there was a free tri
 
 ### 3. What plan start_date values occur after the year 2020 for our dataset? Show the breakdown by count of events for each plan_name
 
-```
+```sql
 SELECT
   s.plan_id,
   plan_name,
@@ -124,7 +124,7 @@ This query counts the amount of plans that are signed up for in the year 2021, s
 
 ### 4. What is the customer count and percentage of customers who have churned rounded to 1 decimal place?
 
-```
+```sql
 SELECT
     (SELECT
       COUNT(DISTINCT customer_id)
@@ -146,7 +146,7 @@ This uses subqueries to find the exact number of customers that have churned, an
 
 ### 5. How many customers have churned straight after their initial free trial - what percentage is this rounded to the nearest whole number?
 
-```
+```sql
 WITH ranked AS (SELECT 
   customer_id, 
   plan_id, 
@@ -168,7 +168,7 @@ With this, it counts the rows where the ranking is equal to 2 and the plan ID is
 
 ### 6. What is the number and percentage of customer plans after their initial free trial?
 
-```
+```sql
 WITH ranked AS (SELECT 
     customer_id, 
     s.plan_id,
@@ -201,7 +201,7 @@ This uses a similar CTE as the last question to pull relevant info and add ranki
 
 ### 7. What is the customer count and percentage breakdown of all 5 plan_name values at 2020-12-31?
 
-```
+```sql
 WITH ranked AS (SELECT 
     customer_id, 
     s.plan_id,
@@ -236,7 +236,7 @@ This only needed a few modifications from the previous query. First, the ranking
 
 ### 8. How many customers have upgraded to an annual plan in 2020?
 
-```
+```sql
 SELECT
   COUNT(customer_id) AS count
 FROM subscriptions
@@ -249,7 +249,7 @@ WHERE plan_id = 3 AND YEAR(start_date) = 2020
 
 ### 9. How many days on average does it take for a customer to upgrade to an annual plan from the day they join Foodie-Fi?
 
-```
+```sql
 WITH annual AS (SELECT
   customer_id,
   plan_id,
@@ -280,7 +280,7 @@ This uses two CTEs: one to only pull annual subscriptions, and one to pull trial
 
 I'm honestly not too sure what this question is exactly asking, but I will assume that it is asking for how many customers fall into each category.
 
-```
+```sql
 WITH annual AS (SELECT
   customer_id,
   plan_id,
@@ -350,7 +350,7 @@ Using the same two CTEs, I used CASE statements to put different values dependin
 
 ### 11. How many customers downgraded from a pro monthly to a basic monthly plan in 2020?
 
-```
+```sql
 WITH pro AS (SELECT
 customer_id,
 plan_id,
