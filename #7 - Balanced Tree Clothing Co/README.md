@@ -103,11 +103,93 @@ This takes the total discount amount and divides it by the total number of uniqu
 ![image](https://github.com/user-attachments/assets/d21d3dc1-f900-4cf6-8c60-4aaf95fafb98)
 
 ### 5. What is the percentage split of all transactions for members vs non-members?
+
+```sql
+SELECT
+  ROUND((SELECT COUNT(DISTINCT txn_id) FROM sales WHERE member = 't') / COUNT(DISTINCT txn_id) * 100, 2) AS members,
+  ROUND((SELECT COUNT(DISTINCT txn_id) FROM sales WHERE member = 'f') / COUNT(DISTINCT txn_id) * 100, 2) AS nonmembers
+FROM sales
+```
+I use subqueries to count the number of transactions by members and non-members, which are divided by the total amount of transactions, to get the percentages.
+
+![image](https://github.com/user-attachments/assets/0cf8ec94-4623-42ef-907d-5e53fa19c453)
+
 ### 6. What is the average revenue for member transactions and non-member transactions?
+
+```sql
+WITH totals AS (
+  SELECT
+    txn_id,
+    member,
+    SUM(qty * price) / COUNT(DISTINCT txn_id) AS total
+  FROM sales
+  GROUP BY txn_id, member)
+
+SELECT
+  ROUND((SELECT AVG(total) FROM totals WHERE member = 't'), 2) AS avg_mem,
+  ROUND((SELECT AVG(total) FROM totals WHERE member = 'f'), 2) AS avg_non
+```
+The CTE pulls the total revenue from all transactions, and the main query gets the average from both members and non-members.
+
+![image](https://github.com/user-attachments/assets/5b54cfbb-e3fd-49e5-b8d8-49dae74a3cc0)
+
 ## C. Product Analysis
 ### 1. What are the top 3 products by total revenue before discount?
+
+```sql
+SELECT
+  product_name,
+  SUM(qty * s.price) AS amount
+FROM sales s
+JOIN product_details pd
+  ON s.prod_id = pd.product_id
+GROUP BY product_name
+ORDER BY amount DESC
+LIMIT 3
+```
+![image](https://github.com/user-attachments/assets/04a02d79-690c-4fab-ae6f-09d76f9d6ec7)
+
 ### 2. What is the total quantity, revenue and discount for each segment?
+
+```sql
+SELECT
+  segment_id,
+  segment_name,
+  SUM(qty) AS quantity,
+  SUM(qty * s.price) AS total_rev,
+  ROUND(SUM(qty * s.price * discount/100), 2) AS discount
+FROM sales s
+JOIN product_details pd
+  ON s.prod_id = pd.product_id
+GROUP BY segment_id, segment_name
+ORDER BY segment_id
+```
+![image](https://github.com/user-attachments/assets/f0ffd6bb-c626-4883-b4fb-15238953f0e8)
+
 ### 3. What is the top selling product for each segment?
+
+```sql
+SELECT
+  segment_name,
+  product_name,
+  amount
+FROM
+  (SELECT
+    segment_name,
+    product_name,
+    SUM(qty) AS amount,
+    RANK() OVER (PARTITION BY segment_name ORDER BY SUM(qty) DESC) AS ranking
+  FROM sales s
+  JOIN product_details pd
+    ON s.prod_id = pd.product_id
+  GROUP BY product_name, segment_name
+  ORDER BY segment_name ASC, amount DESC) a
+WHERE ranking = 1
+```
+This ranks each segment so that the top selling product in each is ranked "1", allowing me to pull only the top sellers with the WHERE clause.
+
+![image](https://github.com/user-attachments/assets/7ce59105-56b4-49c3-bc23-ac95c6a56b6b)
+
 ### 4. What is the total quantity, revenue and discount for each category?
 ### 5. What is the top selling product for each category?
 ### 6. What is the percentage split of revenue by product for each segment?
