@@ -191,9 +191,107 @@ This ranks each segment so that the top selling product in each is ranked "1", a
 ![image](https://github.com/user-attachments/assets/7ce59105-56b4-49c3-bc23-ac95c6a56b6b)
 
 ### 4. What is the total quantity, revenue and discount for each category?
+
+```sql
+SELECT
+  category_id,
+  category_name,
+  SUM(qty) AS quantity,
+  SUM(qty * s.price) AS total_rev,
+  ROUND(SUM(qty * s.price * discount/100), 2) AS discount
+FROM sales s
+JOIN product_details pd
+  ON s.prod_id = pd.product_id
+GROUP BY category_id, category_name
+ORDER BY category_id
+```
+These next two use the same queries as questions 2 and 3 but with the segment columns changed to the category columns.
+
+![image](https://github.com/user-attachments/assets/2c0ea44d-1831-4104-ba51-006424f3dff8)
+
 ### 5. What is the top selling product for each category?
+
+```sql
+SELECT
+  category_name,
+  product_name,
+  amount
+FROM
+  (SELECT
+    category_name,
+    product_name,
+    SUM(qty) AS amount,
+    RANK() OVER (PARTITION BY category_name ORDER BY SUM(qty) DESC) AS ranking
+  FROM sales s
+  JOIN product_details pd
+    ON s.prod_id = pd.product_id
+  GROUP BY product_name, category_name
+  ORDER BY category_name ASC, amount DESC) a
+WHERE ranking = 1
+```
+![image](https://github.com/user-attachments/assets/1262b00d-4cd9-41a3-bb4a-0e1c4f3b54c9)
+
 ### 6. What is the percentage split of revenue by product for each segment?
+
+```sql
+SELECT
+  segment_name,
+  SUM(qty * s.price) / (SELECT SUM(qty * price) FROM sales) * 100 AS amount
+FROM sales s
+JOIN product_details pd
+  ON s.prod_id = pd.product_id
+GROUP BY segment_name
+```
+Basically, this takes the sum of each segment's revenue and divides it by total revenue made, which is pulled from the subquery. Question 8 uses the same approach.
+
+![image](https://github.com/user-attachments/assets/2dcb32ab-f508-41ce-a7c1-39c7c451ddd1)
+
 ### 7. What is the percentage split of revenue by segment for each category?
+
+```sql
+SELECT
+  category_name,
+  segment_name,
+  SUM(qty * s.price) / 
+  (SELECT SUM(qty * price) FROM sales) * 100 / 
+  
+  CASE WHEN category_name = 'Womens' THEN
+(SELECT
+  SUM(qty * s.price) / (SELECT SUM(qty * price) FROM sales)
+FROM sales s
+JOIN product_details pd
+  ON s.prod_id = pd.product_id
+  WHERE category_name = 'Womens')
+  
+ ELSE 
+ (SELECT
+  SUM(qty * s.price) / (SELECT SUM(qty * price) FROM sales)
+FROM sales s
+JOIN product_details pd
+  ON s.prod_id = pd.product_id
+  WHERE category_name = 'Mens') END AS amount
+
+FROM sales s
+JOIN product_details pd
+  ON s.prod_id = pd.product_id
+GROUP BY category_name, segment_name
+```
+This was a bit trickier; I took the percentage split of each segment and divided it by the category's percentage split. (For example, Jeans's percentage split was 16% and Women's clothing's split was 44%. 16% divided by 44% makes 36%, which is Jeans's split within women's clothing.) To pull this off, I had to use a CASE statement to pull the accurate split for mens and womens clothing depending on which category the segment fell under.
+
+![image](https://github.com/user-attachments/assets/a2a733a5-d4c9-44dc-8dc0-daf0ab2b8df0)
+
 ### 8. What is the percentage split of total revenue by category?
+
+```sql
+SELECT
+  category_name,
+  SUM(qty * s.price) / (SELECT SUM(qty * price) FROM sales) * 100 AS amount
+FROM sales s
+JOIN product_details pd
+  ON s.prod_id = pd.product_id
+GROUP BY category_name
+```
+![image](https://github.com/user-attachments/assets/c645a60c-d46c-43db-8409-e632dd559875)
+
 ### 9. What is the total transaction “penetration” for each product? (hint: penetration = number of transactions where at least 1 quantity of a product was purchased divided by total number of transactions)
 ### 10. What is the most common combination of at least 1 quantity of any 3 products in a 1 single transaction?
