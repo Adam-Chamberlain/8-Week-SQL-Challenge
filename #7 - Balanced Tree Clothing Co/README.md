@@ -1,5 +1,7 @@
 # [Case Study #7: Balanced Tree Clothing Co.](https://8weeksqlchallenge.com/case-study-7/)
 
+This case study looks at data within an online clothing company. Clothes are broken down into categories and segments, and often times, multiple of the same type of clothing is bought in one transaction, so accurate financial info must be found by joining tables to identify categories and segments and using complex queries.
+
 ## A. High Level Sales Analysis
 ### 1. What was the total quantity sold for all products?
 
@@ -312,28 +314,67 @@ There were a similar number of transactions for each product (most products were
 
 ```sql
 WITH products AS (
-SELECT
-txn_id,
-product_name
-FROM sales s
-JOIN product_details pd
-ON s.prod_id = pd.product_id)
+  SELECT
+    txn_id,
+    product_name
+  FROM sales s
+  JOIN product_details pd
+    ON s.prod_id = pd.product_id)
 
 SELECT
-p.product_name AS one,
-p2.product_name AS two,
-p3.product_name AS three,
-COUNT(*) AS amount
+  p.product_name AS one,
+  p2.product_name AS two,
+  p3.product_name AS three,
+  COUNT(*) AS amount
 FROM products p
 JOIN products p2
-ON p.txn_id = p2.txn_id
-AND p.product_name < p2.product_name
+  ON p.txn_id = p2.txn_id
+  AND p.product_name < p2.product_name
 JOIN products p3
-ON p.txn_id = p3.txn_id
-AND p2.product_name < p3.product_name
+  ON p.txn_id = p3.txn_id
+  AND p2.product_name < p3.product_name
 GROUP BY p.product_name, p2.product_name, p3.product_name
 ORDER BY amount DESC
 ```
 This is a very tricky question, especially since it also counts instances where more than 3 products are purchased, which creates many combinations. First, the `product` CTE was made to pull product names. The CTE was then joined three times to find all possible combinations using specific criteria: the second product HAS to be after the first one alphabetically, and the third product HAS to be after the second one. This way, there won't be the same three products in different orders.
 
 ![image](https://github.com/user-attachments/assets/f9a03e5b-22f1-4feb-81f6-f7156a2acd0d)
+
+## Bonus Challenge
+Use a single SQL query to transform the product_hierarchy and product_prices datasets to the product_details table.
+
+For reference, here are what each table looks like:
+
+`product_details` (The one that must be replicated
+
+![image](https://github.com/user-attachments/assets/e3abcb5e-077c-43ae-8702-1a51ba4c7482)
+
+``product_hierarchy``
+
+![image](https://github.com/user-attachments/assets/f09dd995-615c-4bea-a727-3081d76da3e7)
+
+``product_prices``
+
+![image](https://github.com/user-attachments/assets/6b851958-3bd2-480f-af59-0e70a40f7b0c)
+
+```sql
+SELECT
+  pp.product_id,
+  pp.price,
+  CONCAT(ph.level_text, ' ', ph2.level_text, ' - ', ph3.level_text) AS product_name,
+  ph3.id AS category_id,
+  ph2.id AS segment_id,
+  ph.id AS style_id,
+  ph3.level_text AS category_name,
+  ph2.level_text AS segment_name,
+  ph.level_text AS style_name
+FROM product_hierarchy ph
+JOIN product_prices pp
+  ON ph.id = pp.id
+JOIN product_hierarchy ph2
+  ON ph.parent_id = ph2.id
+JOIN product_hierarchy ph3
+  ON ph2.parent_id = ph3.id
+ORDER BY ph.id
+```
+Adding the prices is the easy part; pulling segment and category IDs was a little trickier. However, since the parent ID was given, I could easily JOIN the `product_hierarchy` table with itself to match it with the corresponding ID. I did this twice: once to find the segment and once to find the category within that segment.
