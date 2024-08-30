@@ -294,4 +294,46 @@ GROUP BY category_name
 ![image](https://github.com/user-attachments/assets/c645a60c-d46c-43db-8409-e632dd559875)
 
 ### 9. What is the total transaction “penetration” for each product? (hint: penetration = number of transactions where at least 1 quantity of a product was purchased divided by total number of transactions)
+
+```sql
+SELECT
+  product_name,
+  COUNT(*) / (SELECT COUNT(DISTINCT txn_id) FROM sales) * 100 AS amount
+FROM sales s
+JOIN product_details pd
+  ON s.prod_id = pd.product_id
+GROUP BY product_name
+```
+There were a similar number of transactions for each product (most products were in ~1,250 transactions) so there isn't much variation here.
+
+![image](https://github.com/user-attachments/assets/d7728471-af78-4278-af48-3193cd3bfac0)
+
 ### 10. What is the most common combination of at least 1 quantity of any 3 products in a 1 single transaction?
+
+```sql
+WITH products AS (
+SELECT
+txn_id,
+product_name
+FROM sales s
+JOIN product_details pd
+ON s.prod_id = pd.product_id)
+
+SELECT
+p.product_name AS one,
+p2.product_name AS two,
+p3.product_name AS three,
+COUNT(*) AS amount
+FROM products p
+JOIN products p2
+ON p.txn_id = p2.txn_id
+AND p.product_name < p2.product_name
+JOIN products p3
+ON p.txn_id = p3.txn_id
+AND p2.product_name < p3.product_name
+GROUP BY p.product_name, p2.product_name, p3.product_name
+ORDER BY amount DESC
+```
+This is a very tricky question, especially since it also counts instances where more than 3 products are purchased, which creates many combinations. First, the `product` CTE was made to pull product names. The CTE was then joined three times to find all possible combinations using specific criteria: the second product HAS to be after the first one alphabetically, and the third product HAS to be after the second one. This way, there won't be the same three products in different orders.
+
+![image](https://github.com/user-attachments/assets/f9a03e5b-22f1-4feb-81f6-f7156a2acd0d)
