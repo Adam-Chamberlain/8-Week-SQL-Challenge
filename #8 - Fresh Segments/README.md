@@ -29,10 +29,95 @@ ORDER BY month_year
 ![image](https://github.com/user-attachments/assets/a81f85d1-0429-4e21-9f49-d63087a79f04)
 
 ### 3. What do you think we should do with these null values in the fresh_segments.interest_metrics
+
+Rows with null values exclude the date and interest ID. The remaining values don't really mean much without the interest ID showing. Out of curiosity, I checked to see how much the average of all the columns were with or without the null values.
+
+With
+
+![image](https://github.com/user-attachments/assets/7a4eb21b-9d1a-4f14-b9e0-fa05a6726244)
+
+Without
+
+![image](https://github.com/user-attachments/assets/46b53bfc-c8fe-4e97-b2e1-54dd515b672a)
+
+None of the values vary enough to be meaningful, and the null values do not take up very many rows, it would probably be best to delete them all.
+
+```sql
+DELETE FROM interest_metrics
+WHERE month_year IS NULL
+```
+
 ### 4. How many interest_id values exist in the fresh_segments.interest_metrics table but not in the fresh_segments.interest_map table? What about the other way around?
+
+```sql
+SELECT
+DISTINCT map.id,
+met.interest_id
+FROM interest_map map
+LEFT JOIN interest_metrics met
+ON map.id = met.interest_id
+WHERE met.interest_id IS NULL
+```
+By joining the two tables with a LEFT JOIN, the amount of unique IDs that do not show up in `interest_metrics` can be counted. Alternatively, the second and third line can be changed to `COUNT(DISTINCT map.id)` to show the actual number of missing IDs.
+
+![image](https://github.com/user-attachments/assets/251894b5-e469-48be-ab70-55debfc4a5fc)
+
+```sql
+SELECT
+DISTINCT map.id,
+met.interest_id
+FROM interest_map map
+RIGHT JOIN interest_metrics met
+ON map.id = met.interest_id
+WHERE map.id IS NULL
+```
+Doing it the other way around, there are no missing IDs on the `interest_map` table.
+
 ### 5. Summarise the id values in the fresh_segments.interest_map by its total record count in this table
+
+```sql
+SELECT
+id,
+interest_name,
+COUNT(interest_name) AS amount
+FROM interest_map map
+JOIN interest_metrics met
+ON map.id = met.interest_id
+GROUP BY id, interest_name
+ORDER BY amount DESC, id
+```
+I'm not entirely sure what "this table" is referring to, so I am assuming it means `interest_metrics`. Each ID only appears once on the `interest_map` table. The table below shows the first few rows, ordered by the highest amount.
+
+![image](https://github.com/user-attachments/assets/1c8cd823-04a1-48f2-9768-e0d9ac20a7a4)
+
 ### 6. What sort of table join should we perform for our analysis and why? Check your logic by checking the rows where interest_id = 21246 in your joined output and include all columns from fresh_segments.interest_metrics and all columns from fresh_segments.interest_map except from the id column.
+
+INNER JOIN should be used so that there are not NULL values for the seven unused IDs.
+
 ### 7. Are there any records in your joined table where the month_year value is before the created_at value from the fresh_segments.interest_map table? Do you think these values are valid and why?
+
+```sql
+SELECT
+month_year,
+id,
+interest_name,
+created_at
+FROM interest_map map
+JOIN interest_metrics met
+ON map.id = met.interest_id
+WHERE created_at > month_year
+```
+There are many instances where this happened, which is likely due to the fact that the `month_year` column always defaults to the first day of the month. If they were created before the `month_year` value, it is likely that the customer gained interest at that point instead.
+
+![image](https://github.com/user-attachments/assets/144a8936-944a-453a-9dfa-98adb48de6f4)
+
+To double-check that all of these instances are in the same month, I changed the last line of the query to this:
+
+```sql
+WHERE created_at > DATE(month_year + 30)
+```
+This adds 30 days to the `month_year` value to see if there were any instances where the interest ID was created a month or more later, which there was not.
+
 ## B. Interest Analysis
 ### 1. Which interests have been present in all month_year dates in our dataset?
 ### 2. Using this same total_months measure - calculate the cumulative percentage of all records starting at 14 months - which total_months value passes the 90% cumulative percentage value?
