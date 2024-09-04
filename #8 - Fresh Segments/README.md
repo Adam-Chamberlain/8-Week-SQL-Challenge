@@ -120,6 +120,25 @@ This adds 30 days to the `month_year` value to see if there were any instances w
 
 ## B. Interest Analysis
 ### 1. Which interests have been present in all month_year dates in our dataset?
+
+There are 14 months included in the dataset, so any ID that is counted 14 times has been present in every month.
+
+```sql
+SELECT
+COUNT(*) AS amount
+FROM (
+SELECT
+interest_id,
+COUNT(*) AS amount
+FROM interest_metrics
+GROUP BY interest_id
+ORDER BY amount DESC, interest_id) a
+WHERE amount = 14
+```
+The subquery lists all interest IDs with how many times they appeared, and the main query counts how many of those IDs appeared 14 times.
+
+![image](https://github.com/user-attachments/assets/eac738b3-14f2-4508-9673-e87d278a9f5a)
+
 ### 2. Using this same total_months measure - calculate the cumulative percentage of all records starting at 14 months - which total_months value passes the 90% cumulative percentage value?
 ### 3. If we were to remove all interest_id values which are lower than the total_months value we found in the previous question - how many total data points would we be removing?
 ### 4. Does this decision make sense to remove these data points from a business perspective? Use an example where there are all 14 months present to a removed interest example for your arguments - think about what it means to have less months present from a segment perspective.
