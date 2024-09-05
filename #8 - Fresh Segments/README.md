@@ -20,8 +20,8 @@ The `month_year` column can only be seven characters long, so I first updated it
 
 ```sql
 SELECT
-month_year,
-COUNT(*) AS amount
+  month_year,
+  COUNT(*) AS amount
 FROM interest_metrics
 GROUP BY month_year
 ORDER BY month_year
@@ -51,11 +51,11 @@ WHERE month_year IS NULL
 
 ```sql
 SELECT
-DISTINCT map.id,
-met.interest_id
+  DISTINCT map.id,
+  met.interest_id
 FROM interest_map map
 LEFT JOIN interest_metrics met
-ON map.id = met.interest_id
+  ON map.id = met.interest_id
 WHERE met.interest_id IS NULL
 ```
 By joining the two tables with a LEFT JOIN, the amount of unique IDs that do not show up in `interest_metrics` can be counted. Alternatively, the second and third line can be changed to `COUNT(DISTINCT map.id)` to show the actual number of missing IDs.
@@ -64,11 +64,11 @@ By joining the two tables with a LEFT JOIN, the amount of unique IDs that do not
 
 ```sql
 SELECT
-DISTINCT map.id,
-met.interest_id
+  DISTINCT map.id,
+  met.interest_id
 FROM interest_map map
 RIGHT JOIN interest_metrics met
-ON map.id = met.interest_id
+  ON map.id = met.interest_id
 WHERE map.id IS NULL
 ```
 Doing it the other way around, there are no missing IDs on the `interest_map` table.
@@ -77,12 +77,12 @@ Doing it the other way around, there are no missing IDs on the `interest_map` ta
 
 ```sql
 SELECT
-id,
-interest_name,
-COUNT(interest_name) AS amount
+  id,
+  interest_name,
+  COUNT(interest_name) AS amount
 FROM interest_map map
 JOIN interest_metrics met
-ON map.id = met.interest_id
+  ON map.id = met.interest_id
 GROUP BY id, interest_name
 ORDER BY amount DESC, id
 ```
@@ -98,13 +98,13 @@ INNER JOIN should be used so that there are not NULL values for the seven unused
 
 ```sql
 SELECT
-month_year,
-id,
-interest_name,
-created_at
+  month_year,
+  id,
+  interest_name,
+  created_at
 FROM interest_map map
 JOIN interest_metrics met
-ON map.id = met.interest_id
+  ON map.id = met.interest_id
 WHERE created_at > month_year
 ```
 There are many instances where this happened, which is likely due to the fact that the `month_year` column always defaults to the first day of the month. If they were created before the `month_year` value, it is likely that the customer gained interest at that point instead.
@@ -125,14 +125,14 @@ There are 14 months included in the dataset, so any ID that is counted 14 times 
 
 ```sql
 SELECT
-COUNT(*) AS amount
+  COUNT(*) AS amount
 FROM (
-SELECT
-interest_id,
-COUNT(*) AS amount
-FROM interest_metrics
-GROUP BY interest_id
-ORDER BY amount DESC, interest_id) a
+  SELECT
+    interest_id,
+    COUNT(*) AS amount
+  FROM interest_metrics
+  GROUP BY interest_id
+  ORDER BY amount DESC, interest_id) a
 WHERE amount = 14
 ```
 The subquery lists all interest IDs with how many times they appeared, and the main query counts how many of those IDs appeared 14 times.
@@ -140,13 +140,68 @@ The subquery lists all interest IDs with how many times they appeared, and the m
 ![image](https://github.com/user-attachments/assets/eac738b3-14f2-4508-9673-e87d278a9f5a)
 
 ### 2. Using this same total_months measure - calculate the cumulative percentage of all records starting at 14 months - which total_months value passes the 90% cumulative percentage value?
+
+I have no idea what this question is asking, and after a bit of looking around, it looks like nobody else understands it either. I am skipping the remaining questions based off of this one for now.
+
 ### 3. If we were to remove all interest_id values which are lower than the total_months value we found in the previous question - how many total data points would we be removing?
 ### 4. Does this decision make sense to remove these data points from a business perspective? Use an example where there are all 14 months present to a removed interest example for your arguments - think about what it means to have less months present from a segment perspective.
 ### 5. After removing these interests - how many unique interests are there for each month?
 ## C. Segment Analysis
 ### 1. Using our filtered dataset by removing the interests with less than 6 months worth of data, which are the top 10 and bottom 10 interests which have the largest composition values in any month_year? Only use the maximum composition value for each interest but you must keep the corresponding month_year
+
+```sql
+SELECT
+  im.month_year,
+  im.interest_id,
+  im.composition
+FROM interest_metrics im
+JOIN (
+  SELECT
+    interest_id,
+    COUNT(*) AS amount
+  FROM interest_metrics
+  GROUP BY interest_id) a
+  ON im.interest_id = a.interest_id
+WHERE a.amount >= 6
+ORDER BY composition DESC
+LIMIT 10
+```
+I created a subquery that counts the amount of times each interest ID appears, and then I joined it with the original `interest_metrics` table. This allowed me to filter out interest IDs that appear less than 6 times. With that, I sorted it to show the top composition values.
+
+![image](https://github.com/user-attachments/assets/c9a074cb-fd7a-4296-8606-60778b1cb8e5)
+
+Removing DESC from the ORDER BY clause shows the lowest values:
+
+![image](https://github.com/user-attachments/assets/2de14dc3-2358-4ade-9999-2573773c9dc6)
+
 ### 2. Which 5 interests had the lowest average ranking value?
+
+```sql
+SELECT
+interest_id,
+AVG(ranking) AS average
+FROM interest_metrics
+GROUP BY interest_id
+ORDER BY average DESC
+LIMIT 5
+```
+The best, or highest, rankings are the smallest numbers, so the five with the highest average are shown.
+
+![image](https://github.com/user-attachments/assets/be51a10e-44a9-4725-a5cd-c49a63542841)
+
 ### 3. Which 5 interests had the largest standard deviation in their percentile_ranking value?
+
+```
+SELECT
+interest_id,
+ROUND(STDDEV(percentile_ranking), 2) AS stdev
+FROM interest_metrics
+GROUP BY interest_id
+ORDER BY stdev DESC
+LIMIT 5
+```
+![image](https://github.com/user-attachments/assets/e91b3dd4-6214-4135-bd95-094aa34f7755)
+
 ### 4. For the 5 interests found in the previous question - what was minimum and maximum percentile_ranking values for each interest and its corresponding year_month value? Can you describe what is happening for these 5 interests?
 ### 5. How would you describe our customers in this segment based off their composition and ranking values? What sort of products or services should we show to these customers and what should we avoid?
 ## D. Index Analysis
