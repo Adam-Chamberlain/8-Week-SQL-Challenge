@@ -553,48 +553,43 @@ SELECT
     CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END AS extras
 FROM pizza_runner.customer_orders),
 
-temp2 AS (SELECT
+separate AS (SELECT
   row,
   CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER) AS exclusions,
   CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER) AS extras
-FROM clean),
-
-temp3 AS (SELECT
-  row,
-  STRING_AGG(topping_name, ', ') AS exclusions
-FROM temp2 t2
-JOIN pizza_runner.pizza_toppings pt
-  ON t2.exclusions = pt.topping_id
-GROUP BY row),
-
-temp4 AS (SELECT
-  row,
-  STRING_AGG(topping_name, ', ') AS extras
-FROM temp2 t2
-JOIN pizza_runner.pizza_toppings pt
-  ON t2.extras = pt.topping_id
-GROUP BY row)
+FROM clean)
 
 SELECT
   c.order_id,
   CONCAT(
     CASE WHEN pn.pizza_name LIKE 'Meatlovers' THEN 'Meat Lovers' ELSE pn.pizza_name END,
-    CASE WHEN t3.exclusions IS NOT NULL THEN ' - Exclude ' ELSE NULL END, t3.exclusions,
-    CASE WHEN t4.extras IS NOT NULL THEN ' - Extra ' ELSE NULL END, t4.extras) AS order
+    CASE WHEN a.exclusions IS NOT NULL THEN ' - Exclude ' ELSE NULL END, a.exclusions,
+    CASE WHEN b.extras IS NOT NULL THEN ' - Extra ' ELSE NULL END, b.extras) AS order
 FROM clean c
-LEFT JOIN temp3 t3
-  ON c.row = t3.row
-LEFT JOIN temp4 t4
-  ON c.row = t4.row
+LEFT JOIN (
+  SELECT
+    row,
+    STRING_AGG(topping_name, ', ') AS exclusions
+  FROM separate s
+  JOIN pizza_runner.pizza_toppings pt
+    ON s.exclusions = pt.topping_id
+  GROUP BY row) a
+    ON c.row = a.row
+LEFT JOIN (
+    SELECT
+    row,
+    STRING_AGG(topping_name, ', ') AS extras
+  FROM separate s
+  JOIN pizza_runner.pizza_toppings pt
+    ON s.extras = pt.topping_id
+  GROUP BY row) b
+  ON c.row = b.row
 JOIN pizza_runner.pizza_names pn
   ON c.pizza_id = pn.pizza_id
 ```
-This took a LOT of CTE tables, but it works!
 - clean - Cleans data and pulls relevant information. I also added a row number column, which is important for grouping ingredients back together later on.
-- temp2 - Separates all exclusions and extras into separate columns so that they can be properly identified with the `pizza_toppings` table.
-- temp3 - Matches ingredient numbers from the `exclusions` column and groups them back together based on the initial row number in the case where there are multiple exclusions.
-- temp4 - Does the same thing as temp3 but with the `extras` column instead.
-- Main Query - Where it all comes together. Exclusions are pulled from temp3, and extras are pulled from temp4. The previous queries already formatted properly with commas separating them. A CONCAT function brings it all together, using CASE statements to add hyphens and the "Exclude/Extra" text if there are any in the given order.
+- separate - Separates all exclusions and extras into separate columns so that they can be properly identified with the `pizza_toppings` table.
+- Main Query - Where it all comes together. Two subqueries are used: `a` pulls exclusions and `b` pulls extras. The subqueries format them properly with commas separating them with STRING_AGG. A CONCAT function brings it all together, using CASE statements to add hyphens and the "Exclude/Extra" text if there are any in the given order.
 
 | order_id | order                                                            |
 | -------- | ---------------------------------------------------------------- |
