@@ -262,18 +262,18 @@ The ID `21057` appears six times and has the top six average composition values.
 
 ```sql
 SELECT
-month_year,
-ROUND(AVG(avg_comp), 2) AS average
+  month_year,
+  ROUND(AVG(avg_comp), 2) AS average
 FROM
-(SELECT
-RANK() OVER(PARTITION BY month_year ORDER BY ROUND(composition / index_value, 2) DESC) AS ranking,
-interest_id,
-month_year,
-composition,
-index_value,
-ROUND(composition / index_value, 2) AS avg_comp
-FROM interest_metrics
-ORDER BY month_year, ranking) a
+  (SELECT
+    RANK() OVER(PARTITION BY month_year ORDER BY ROUND(composition / index_value, 2) DESC) AS ranking,
+    interest_id,
+    month_year,
+    composition,
+    index_value,
+    ROUND(composition / index_value, 2) AS avg_comp
+  FROM interest_metrics
+  ORDER BY month_year, ranking) a
 WHERE ranking BETWEEN 1 AND 10
 GROUP BY month_year
 ```
