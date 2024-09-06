@@ -699,7 +699,7 @@ JOIN pizza_runner.pizza_recipes pr
   ON co.pizza_id = pr.pizza_id
 JOIN pizza_runner.runner_orders ro
   ON co.order_id = ro.order_id
-WHERE CASE WHEN ro.cancel lation LIKE 'null' or ro.cancellation LIKE '' THEN null ELSE ro.cancellation END IS NULL
+WHERE CASE WHEN ro.cancellation LIKE 'null' or ro.cancellation LIKE '' THEN null ELSE ro.cancellation END IS NULL
 ORDER BY order_id),
 
 data AS (
