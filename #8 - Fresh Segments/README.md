@@ -1,5 +1,6 @@
 # [Case Study #8: Fresh Segments](https://8weeksqlchallenge.com/case-study-8/)
 
+This case study looks at a digital marketing agency and tracks monthly data on how much interest their clients receive. There were some questions that were a bit confusing, so I have not completed every single question in this case study, but I will likely return to them at a later date.
 
 ## A. Data Exploration and Cleansing
 ### 1. Update the fresh_segments.interest_metrics table by modifying the month_year column to be a date data type with the start of the month
@@ -178,8 +179,8 @@ Removing DESC from the ORDER BY clause shows the lowest values:
 
 ```sql
 SELECT
-interest_id,
-AVG(ranking) AS average
+  interest_id,
+  AVG(ranking) AS average
 FROM interest_metrics
 GROUP BY interest_id
 ORDER BY average DESC
@@ -191,10 +192,10 @@ The best, or highest, rankings are the smallest numbers, so the five with the hi
 
 ### 3. Which 5 interests had the largest standard deviation in their percentile_ranking value?
 
-```
+```sql
 SELECT
-interest_id,
-ROUND(STDDEV(percentile_ranking), 2) AS stdev
+  interest_id,
+  ROUND(STDDEV(percentile_ranking), 2) AS stdev
 FROM interest_metrics
 GROUP BY interest_id
 ORDER BY stdev DESC
@@ -203,14 +204,85 @@ LIMIT 5
 ![image](https://github.com/user-attachments/assets/e91b3dd4-6214-4135-bd95-094aa34f7755)
 
 ### 4. For the 5 interests found in the previous question - what was minimum and maximum percentile_ranking values for each interest and its corresponding year_month value? Can you describe what is happening for these 5 interests?
+
+```sql
+SELECT
+  a.interest_id,
+  a.stdev,
+  a.max,
+  im1.month_year AS max_month,
+  a.min,
+  im2.month_year AS min_month
+FROM
+  (SELECT
+    interest_id,
+    ROUND(STDDEV(percentile_ranking), 2) AS stdev,
+    MAX(percentile_ranking) AS max,
+    MIN(percentile_ranking) AS min
+  FROM interest_metrics
+  GROUP BY interest_id) a
+JOIN interest_metrics im1
+  ON a.interest_id = im1.interest_id AND a.max = im1.percentile_ranking
+JOIN interest_metrics im2
+  ON a.interest_id = im2.interest_id AND a.min = im2.percentile_ranking
+ORDER BY stdev DESC
+LIMIT 5
+```
+I basically took the prior question's query and expanded on it for this. I found the min and max values in a subquery and matched them with the respective `month_year` date as long as the interest ID also matched. To do this, I joined the subquery with two the original `interest_metrics` table twice, once to find the max value's month and year, and once for the min value.
+
+![image](https://github.com/user-attachments/assets/5321c4ea-3187-4b59-a073-e79a2363d0ff)
+
 ### 5. How would you describe our customers in this segment based off their composition and ranking values? What sort of products or services should we show to these customers and what should we avoid?
 ## D. Index Analysis
+
 The index_value is a measure which can be used to reverse calculate the average composition for Fresh Segments’ clients.
 
 Average composition can be calculated by dividing the composition column by the index_value column rounded to 2 decimal places.
 
-What is the top 10 interests by the average composition for each month?
-For all of these top 10 interests - which interest appears the most often?
-What is the average of the average composition for the top 10 interests for each month?
-What is the 3 month rolling average of the max average composition value from September 2018 to August 2019 and include the previous top ranking interests in the same output shown below.
-Provide a possible reason why the max average composition might change from month to month? Could it signal something is not quite right with the overall business model for Fresh Segments?
+### 1. What is the top 10 interests by the average composition for each month?
+
+```sql
+SELECT
+  interest_id,
+  month_year,
+  composition,
+  index_value,
+  ROUND(composition / index_value, 2) AS avg_comp
+FROM interest_metrics
+ORDER BY avg_comp DESC
+LIMIT 10
+```
+![image](https://github.com/user-attachments/assets/c2aa1135-b902-4972-b77f-0193d32116a6)
+
+### 2. For all of these top 10 interests - which interest appears the most often?
+
+The ID `21057` appears six times and has the top six average composition values. `6324` also appears twice.
+
+### 3. What is the average of the average composition for the top 10 interests for each month?
+
+```sql
+SELECT
+month_year,
+ROUND(AVG(avg_comp), 2) AS average
+FROM
+(SELECT
+RANK() OVER(PARTITION BY month_year ORDER BY ROUND(composition / index_value, 2) DESC) AS ranking,
+interest_id,
+month_year,
+composition,
+index_value,
+ROUND(composition / index_value, 2) AS avg_comp
+FROM interest_metrics
+ORDER BY month_year, ranking) a
+WHERE ranking BETWEEN 1 AND 10
+GROUP BY month_year
+```
+The subquery creates the `avg_comp` column and also ranks each average composition value by each month. This allows me to only pull the top 10 from each month in the outer query.
+
+![image](https://github.com/user-attachments/assets/a0432883-57f0-4825-a09a-347f68ef7bb6)
+
+### 4. What is the 3 month rolling average of the max average composition value from September 2018 to August 2019 and include the previous top ranking interests in the same output shown below.
+
+Again, this question is a little confusing, and I am not entirely sure how to solve it properly. I will return to this at a later date.
+
+### 5. Provide a possible reason why the max average composition might change from month to month? Could it signal something is not quite right with the overall business model for Fresh Segments?
