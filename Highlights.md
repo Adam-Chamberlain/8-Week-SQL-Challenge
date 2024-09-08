@@ -8,10 +8,10 @@ This page showcases the problems within all eight case studies that were the mos
 This case study focuses on a pizza delivery company. There are multiple questions that I am going to focus on from here - despite only being the second case study, it had some of the hardest challenges overall! Note that I used DB Fiddle for this and the first case study, which was provided on that website, but I switched to MySQL for case studies 3-8.
 
 ## 1. Generate an order item for each record in the customers_orders table in the format of one of the following:
-- Meat Lovers
-- Meat Lovers - Exclude Beef
-- Meat Lovers - Extra Bacon
-- Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
+- **Meat Lovers**
+- **Meat Lovers - Exclude Beef**
+- **Meat Lovers - Extra Bacon**
+- **Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers**
 
 For context, this is what the `customer_orders` table looks like initially. In order to solve this, the exclusions and extras need to be separated, identified using the `pizza_toppings` table, and put back together with specific additions in the text if criteria is met.
 
@@ -161,7 +161,7 @@ Final output
 | 10       | Meat Lovers - Exclude BBQ Sauce, Mushrooms - Extra Bacon, Cheese |
 
 ## 2. Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients.
-(For example: "Meat Lovers: 2xBacon, Beef, ... , Salami")
+**(For example: "Meat Lovers: 2xBacon, Beef, ... , Salami")**
 
 This is an extremely complex challenge that requires lots of steps. First off, all of the necessary data is separated into many tables. The `pizza_recipes` table shows each pizza and their toppings:
 
