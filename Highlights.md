@@ -2,8 +2,8 @@ This page showcases the problems within all eight case studies that were the mos
 
 # 2. Pizza Runner
 
-- **[Question 1](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#generate-an-order-item-for-each-record-in-the-customers_orders-table-in-the-format-of-one-of-the-following)**
-- **[Question 2](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#generate-an-alphabetically-ordered-comma-separated-ingredient-list-for-each-pizza-order-from-the-customer_orders-table-and-add-a-2x-in-front-of-any-relevant-ingredients)**
+- **[Question 1](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#1-generate-an-order-item-for-each-record-in-the-customers_orders-table-in-the-format-of-one-of-the-following)**
+- **[Question 2](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#2-generate-an-alphabetically-ordered-comma-separated-ingredient-list-for-each-pizza-order-from-the-customer_orders-table-and-add-a-2x-in-front-of-any-relevant-ingredients)**
 
 This case study focuses on a pizza delivery company. There are multiple questions that I am going to focus on from here - despite only being the second case study, it had some of the hardest challenges overall! Note that I used DB Fiddle for this and the first case study, which was provided on that website, but I switched to MySQL for case studies 3-8.
 
