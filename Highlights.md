@@ -1,10 +1,13 @@
 This page showcases the problems within all eight case studies that were the most difficult and required the most complex SQL queries. I also explained my thought process in each query much more in-depth.
 
-## 2. Pizza Runner
+# 2. Pizza Runner
 
-This case study focuses on a pizza delivery company. There are multiple questions that I am going to focus on from here. I also used DB Fiddle for this and the first case study, which was provided on that website, but I switched to MySQL for case studies 3-8.
+- **[Question 1](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/edit/main/Highlights.md#generate-an-order-item-for-each-record-in-the-customers_orders-table-in-the-format-of-one-of-the-following)**
+- **[Question 2](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/edit/main/Highlights.md#generate-an-alphabetically-ordered-comma-separated-ingredient-list-for-each-pizza-order-from-the-customer_orders-table-and-add-a-2x-in-front-of-any-relevant-ingredients)**
 
-### Generate an order item for each record in the customers_orders table in the format of one of the following:
+This case study focuses on a pizza delivery company. There are multiple questions that I am going to focus on from here - despite only being the second case study, it had some of the hardest challenges overall! Note that I used DB Fiddle for this and the first case study, which was provided on that website, but I switched to MySQL for case studies 3-8.
+
+## Generate an order item for each record in the customers_orders table in the format of one of the following:
 - Meat Lovers
 - Meat Lovers - Exclude Beef
 - Meat Lovers - Extra Bacon
@@ -156,3 +159,194 @@ Final output
 | 9        | Meat Lovers - Exclude Cheese - Extra Bacon, Chicken              |
 | 10       | Meat Lovers                                                      |
 | 10       | Meat Lovers - Exclude BBQ Sauce, Mushrooms - Extra Bacon, Cheese |
+
+## Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients.
+(For example: "Meat Lovers: 2xBacon, Beef, ... , Salami")
+
+This is an extremely complex challenge that requires lots of steps. First off, all of the necessary data is separated into many tables. The `pizza_recipes` table shows each pizza and their toppings:
+
+| pizza_id | toppings                |
+| -------- | ----------------------- |
+| 1        | 1, 2, 3, 4, 5, 6, 8, 10 |
+| 2        | 4, 6, 7, 9, 11, 12      |
+
+However, the pizza's names are on the `pizza_names` table:
+
+| pizza_id | pizza_name |
+| -------- | ---------- |
+| 1        | Meatlovers |
+| 2        | Vegetarian |
+
+And toppings are listed on the `pizza_toppings` table:
+
+| topping_id | topping_name |
+| ---------- | ------------ |
+| 1          | Bacon        |
+| 2          | BBQ Sauce    |
+| 3          | Beef         |
+| 4          | Cheese       |
+| 5          | Chicken      |
+| 6          | Mushrooms    |
+| 7          | Onions       |
+| 8          | Pepperoni    |
+| 9          | Peppers      |
+| 10         | Salami       |
+| 11         | Tomatoes     |
+| 12         | Tomato Sauce |
+
+To do this, the topping numbers must be separated so that they can be identified with the corresponding topping name, and extras and exclusions need to be taken into account as well.
+
+```sql
+WITH clean AS (
+SELECT
+  ROW_NUMBER() OVER() AS row,
+  co.order_id,
+  co.pizza_id,
+  CASE WHEN exclusions LIKE '' OR exclusions LIKE 'null' THEN null ELSE exclusions END AS exclusions,
+  CASE WHEN extras LIKE '' OR extras LIKE 'null' THEN null ELSE extras END AS extras,
+  pr.toppings
+FROM pizza_runner.customer_orders co
+  JOIN pizza_runner.pizza_recipes pr
+  ON co.pizza_id = pr.pizza_id
+ORDER BY order_id),
+  
+organize AS (SELECT
+  row,
+  c.order_id,
+  pn.pizza_name,
+  topping_name,
+  CASE WHEN topping_id IN (
+    SELECT CAST(UNNEST(STRING_TO_ARRAY(pr.toppings, ',')) AS INTEGER)) THEN 1 ELSE NULL END AS toppings,
+  CASE WHEN topping_id IN (
+    SELECT CAST(UNNEST(STRING_TO_ARRAY(exclusions, ',')) AS INTEGER)) THEN 1 ELSE NULL END AS exclusions,
+  CASE WHEN topping_id IN (
+    SELECT CAST(UNNEST(STRING_TO_ARRAY(extras, ',')) AS INTEGER)) THEN 1 ELSE NULL END AS extras
+FROM
+clean c,
+pizza_runner.pizza_toppings pt,
+pizza_runner.pizza_recipes pr
+JOIN pizza_runner.pizza_names pn
+  ON pr.pizza_id = pn.pizza_id
+WHERE c.pizza_id = pr.pizza_id
+ORDER BY row),
+
+filter AS (SELECT
+  row,
+  order_id,
+  CASE WHEN pizza_name LIKE 'Meatlovers' THEN 'Meat Lovers' ELSE pizza_name END AS pizza_name,
+  topping_name,
+  toppings,
+  extras,
+  exclusions,
+  CASE WHEN toppings = 1 AND extras = 1 THEN CONCAT('2x',topping_name)
+    WHEN exclusions = 1 THEN NULL
+    WHEN toppings = 1 OR extras = 1 THEN topping_name ELSE NULL END AS topping
+FROM organize)
+
+SELECT
+  order_id,
+  CONCAT(pizza_name, ': ', STRING_AGG(topping, ', ' ORDER BY topping ASC)) AS order
+FROM filter
+GROUP BY pizza_name, order_id, row
+ORDER BY order_id
+```
+**clean**: Like the last challenge, the data must be cleaned first, since there are many inconsistent NULL values. Additionally, the `customer_orders` table was joined with the `pizza_recipes` table to get the list of ingredients from the selected pizza. Lastly, a row number was added so that each pizza could be put back together at the end.
+| row | order_id | pizza_id | exclusions | extras | toppings                |
+| --- | -------- | -------- | ---------- | ------ | ----------------------- |
+| 7   | 1        | 1        |            |        | 1, 2, 3, 4, 5, 6, 8, 10 |
+| 2   | 2        | 1        |            |        | 1, 2, 3, 4, 5, 6, 8, 10 |
+| 3   | 3        | 1        |            |        | 1, 2, 3, 4, 5, 6, 8, 10 |
+| 11  | 3        | 2        |            |        | 4, 6, 7, 9, 11, 12      |
+| 14  | 4        | 2        | 4          |        | 4, 6, 7, 9, 11, 12      |
+| 8   | 4        | 1        | 4          |        | 1, 2, 3, 4, 5, 6, 8, 10 |
+| 9   | 4        | 1        | 4          |        | 1, 2, 3, 4, 5, 6, 8, 10 |
+| 10  | 5        | 1        |            | 1      | 1, 2, 3, 4, 5, 6, 8, 10 |
+| 13  | 6        | 2        |            |        | 4, 6, 7, 9, 11, 12      |
+| 12  | 7        | 2        |            | 1      | 4, 6, 7, 9, 11, 12      |
+| 4   | 8        | 1        |            |        | 1, 2, 3, 4, 5, 6, 8, 10 |
+| 5   | 9        | 1        | 4          | 1, 5   | 1, 2, 3, 4, 5, 6, 8, 10 |
+| 1   | 10       | 1        | 2, 6       | 1, 4   | 1, 2, 3, 4, 5, 6, 8, 10 |
+| 6   | 10       | 1        |            |        | 1, 2, 3, 4, 5, 6, 8, 10 |
+
+**organize**: This is where it gets a bit complex; this query lists each pizza ordered, the corresponding pizza type, and every single ingredient, whether it is on the pizza or not. If the ingredient is included as a standard topping, exclusion, or extra, the column gains the value 1; otherwise, it stays empty.
+
+This pulls from three unjoined tables; every `row` value (each pizza) has 24 columns, since there are two pizza types and 12 ingredients. (12 for Meatlovers and each of the 12 ingredients, and 12 more for Vegetarian). `pizza_recipes` pulls the pizza IDs (which are named via joining the table with `pizza_names`) and ingredients are pulled from `pizza_toppings`. Since each pizza ordered already has an ID, I used a WHERE clause to filter out the other type of pizza, since those rows are not necessary; this way, there are just 12 rows per pizza, each corresponding with the right pizza type.
+
+The CASE statements with subqueries decide whether or not the ingredient is included or not. It lists all the corresponding ingredients from the pizza in a given row. If there is a match, it is given the value 1. For example, Bacon has the value "1", and the "Meatlovers" pizza includes that "1" in its toppings, so bacon is included and is given the value of 1. Similarly, it checks the `exclusions` and `extras` columns for matching values.
+
+Only the first two pizzas are shown, since the table is quite long at this point.
+| row | order_id | pizza_name | topping_name | toppings | exclusions | extras |
+| --- | -------- | ---------- | ------------ | -------- | ---------- | ------ |
+| 1   | 10       | Meatlovers | Bacon        | 1        |            | 1      |
+| 1   | 10       | Meatlovers | BBQ Sauce    | 1        | 1          |        |
+| 1   | 10       | Meatlovers | Beef         | 1        |            |        |
+| 1   | 10       | Meatlovers | Cheese       | 1        |            | 1      |
+| 1   | 10       | Meatlovers | Chicken      | 1        |            |        |
+| 1   | 10       | Meatlovers | Mushrooms    | 1        | 1          |        |
+| 1   | 10       | Meatlovers | Onions       |          |            |        |
+| 1   | 10       | Meatlovers | Pepperoni    | 1        |            |        |
+| 1   | 10       | Meatlovers | Peppers      |          |            |        |
+| 1   | 10       | Meatlovers | Salami       | 1        |            |        |
+| 1   | 10       | Meatlovers | Tomatoes     |          |            |        |
+| 1   | 10       | Meatlovers | Tomato Sauce |          |            |        |
+| 2   | 2        | Meatlovers | Bacon        | 1        |            |        |
+| 2   | 2        | Meatlovers | BBQ Sauce    | 1        |            |        |
+| 2   | 2        | Meatlovers | Beef         | 1        |            |        |
+| 2   | 2        | Meatlovers | Cheese       | 1        |            |        |
+| 2   | 2        | Meatlovers | Chicken      | 1        |            |        |
+| 2   | 2        | Meatlovers | Mushrooms    | 1        |            |        |
+| 2   | 2        | Meatlovers | Onions       |          |            |        |
+| 2   | 2        | Meatlovers | Pepperoni    | 1        |            |        |
+| 2   | 2        | Meatlovers | Peppers      |          |            |        |
+| 2   | 2        | Meatlovers | Salami       | 1        |            |        |
+| 2   | 2        | Meatlovers | Tomatoes     |          |            |        |
+| 2   | 2        | Meatlovers | Tomato Sauce |          |            |        |
+
+**filter**: This query takes the `toppings`, `extras`, and `exclusions` columns and puts it together to decide what the output is. If the value 1 is shown on both toppings and extras, "2x" is added to the topping name. If all three rows are blank OR the toppings and exclusions columns have 1, it is left blank. (This is because the ingredient starts on the pizza and is then removed) This gives a list of each ingredient present on each pizza, which can be combined using one last query.
+
+Again, only the first two pizzas are shown.
+| row | order_id | pizza_name  | topping_name | toppings | extras | exclusions | topping      |
+| --- | -------- | ----------- | ------------ | -------- | ------ | ---------- | ------------ |
+| 1   | 10       | Meat Lovers | Bacon        | 1        | 1      |            | 2xBacon      |
+| 1   | 10       | Meat Lovers | BBQ Sauce    | 1        |        | 1          |              |
+| 1   | 10       | Meat Lovers | Beef         | 1        |        |            | Beef         |
+| 1   | 10       | Meat Lovers | Cheese       | 1        | 1      |            | 2xCheese     |
+| 1   | 10       | Meat Lovers | Chicken      | 1        |        |            | Chicken      |
+| 1   | 10       | Meat Lovers | Mushrooms    | 1        |        | 1          |              |
+| 1   | 10       | Meat Lovers | Onions       |          |        |            |              |
+| 1   | 10       | Meat Lovers | Pepperoni    | 1        |        |            | Pepperoni    |
+| 1   | 10       | Meat Lovers | Peppers      |          |        |            |              |
+| 1   | 10       | Meat Lovers | Salami       | 1        |        |            | Salami       |
+| 1   | 10       | Meat Lovers | Tomatoes     |          |        |            |              |
+| 1   | 10       | Meat Lovers | Tomato Sauce |          |        |            |              |
+| 2   | 2        | Meat Lovers | Bacon        | 1        |        |            | Bacon        |
+| 2   | 2        | Meat Lovers | BBQ Sauce    | 1        |        |            | BBQ Sauce    |
+| 2   | 2        | Meat Lovers | Beef         | 1        |        |            | Beef         |
+| 2   | 2        | Meat Lovers | Cheese       | 1        |        |            | Cheese       |
+| 2   | 2        | Meat Lovers | Chicken      | 1        |        |            | Chicken      |
+| 2   | 2        | Meat Lovers | Mushrooms    | 1        |        |            | Mushrooms    |
+| 2   | 2        | Meat Lovers | Onions       |          |        |            |              |
+| 2   | 2        | Meat Lovers | Pepperoni    | 1        |        |            | Pepperoni    |
+| 2   | 2        | Meat Lovers | Peppers      |          |        |            |              |
+| 2   | 2        | Meat Lovers | Salami       | 1        |        |            | Salami       |
+| 2   | 2        | Meat Lovers | Tomatoes     |          |        |            |              |
+| 2   | 2        | Meat Lovers | Tomato Sauce |          |        |            |              |
+
+**Final query**: With all the hard work done, the list of toppings just need to be combined. This is done with a CONCAT to pull the pizza name, add a colon, then list each ingredient, alphabatized and separated by columns. This is able to work because of the `row` column given to each pizza in the first query.
+
+| order_id | order                                                                                |
+| -------- | ------------------------------------------------------------------------------------ |
+| 1        | Meat Lovers: BBQ Sauce, Bacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami   |
+| 2        | Meat Lovers: BBQ Sauce, Bacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami   |
+| 3        | Meat Lovers: BBQ Sauce, Bacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami   |
+| 3        | Vegetarian: Cheese, Mushrooms, Onions, Peppers, Tomato Sauce, Tomatoes               |
+| 4        | Meat Lovers: BBQ Sauce, Bacon, Beef, Chicken, Mushrooms, Pepperoni, Salami           |
+| 4        | Meat Lovers: BBQ Sauce, Bacon, Beef, Chicken, Mushrooms, Pepperoni, Salami           |
+| 4        | Vegetarian: Mushrooms, Onions, Peppers, Tomato Sauce, Tomatoes                       |
+| 5        | Meat Lovers: 2xBacon, BBQ Sauce, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami |
+| 6        | Vegetarian: Cheese, Mushrooms, Onions, Peppers, Tomato Sauce, Tomatoes               |
+| 7        | Vegetarian: Bacon, Cheese, Mushrooms, Onions, Peppers, Tomato Sauce, Tomatoes        |
+| 8        | Meat Lovers: BBQ Sauce, Bacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami   |
+| 9        | Meat Lovers: 2xBacon, 2xChicken, BBQ Sauce, Beef, Mushrooms, Pepperoni, Salami       |
+| 10       | Meat Lovers: 2xBacon, 2xCheese, Beef, Chicken, Pepperoni, Salami                     |
+| 10       | Meat Lovers: BBQ Sauce, Bacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami   |
