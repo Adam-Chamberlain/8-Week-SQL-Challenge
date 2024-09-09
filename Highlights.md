@@ -3,8 +3,7 @@ This page showcases the problems within all eight case studies that were the mos
 # Table of Contents
 
 ### **[🍜 Case Study 1: Danny's Diner](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#1--dannys-diner)**
-- **[Question 1 - First Purchase per Customer](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#1-what-was-the-first-item-purchased-by-each-customer)**
-- **[Question 2 - Member Point Multiplier](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#2-in-the-first-week-after-a-customer-becomes-a-member-including-their-join-date-they-earn-2x-points-on-all-items-each-1-spent-equates-to-10-points-and-sushi-has-a-permanent-2x-point-multiplier-how-many-points-do-customers-a-and-b-have-at-the-end-of-january)**
+- **[Question 1 - Member Point Multiplier]([https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#2-in-the-first-week-after-a-customer-becomes-a-member-including-their-join-date-they-earn-2x-points-on-all-items-each-1-spent-equates-to-10-points-and-sushi-has-a-permanent-2x-point-multiplier-how-many-points-do-customers-a-and-b-have-at-the-end-of-january](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/edit/main/Highlights.md#1-in-the-first-week-after-a-customer-becomes-a-member-including-their-join-date-they-earn-2x-points-on-all-items-each-1-spent-equates-to-10-points-and-sushi-has-a-permanent-2x-point-multiplier-how-many-points-do-customers-a-and-b-have-at-the-end-of-january))**
 ### **[🍕 Case Study 2: Pizza Runner](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#2--pizza-runner)**
 - **[Question 1 - List of Exclusions/Extras per Order](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#1-generate-an-order-item-for-each-record-in-the-customers_orders-table-in-the-format-of-one-of-the-following)**
 - **[Question 2 - List of Ingredients per Order](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#2-generate-an-alphabetically-ordered-comma-separated-ingredient-list-for-each-pizza-order-from-the-customer_orders-table-and-add-a-2x-in-front-of-any-relevant-ingredients)**
@@ -23,55 +22,7 @@ This case study looks at a restaurant that has small amounts of data on customer
 
 **[All of my Solutions](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/%231%20-%20Danny's%20Diner/README.md)**
 
-## 1. What was the first item purchased by each customer?
-
-The `sales` table shows the following transactions:
-| customer_id | order_date               | product_id |
-| ----------- | ------------------------ | ---------- |
-| A           | 2021-01-01T00:00:00.000Z | 1          |
-| A           | 2021-01-01T00:00:00.000Z | 2          |
-| A           | 2021-01-07T00:00:00.000Z | 2          |
-| A           | 2021-01-10T00:00:00.000Z | 3          |
-| A           | 2021-01-11T00:00:00.000Z | 3          |
-| A           | 2021-01-11T00:00:00.000Z | 3          |
-| B           | 2021-01-01T00:00:00.000Z | 2          |
-| B           | 2021-01-02T00:00:00.000Z | 2          |
-| B           | 2021-01-04T00:00:00.000Z | 1          |
-| B           | 2021-01-11T00:00:00.000Z | 1          |
-| B           | 2021-01-16T00:00:00.000Z | 3          |
-| B           | 2021-02-01T00:00:00.000Z | 3          |
-| C           | 2021-01-01T00:00:00.000Z | 3          |
-| C           | 2021-01-01T00:00:00.000Z | 3          |
-| C           | 2021-01-07T00:00:00.000Z | 3          |
-
-```sql
-WITH ranked AS (
-  SELECT DISTINCT
-    s.customer_id,
-    s.order_date,
-    m.product_name,
-    RANK() OVER(PARTITION BY s.customer_id ORDER BY s.order_date) AS ranking
-  FROM dannys_diner.sales s
-  JOIN dannys_diner.menu m
-    ON s.product_id = m.product_id
-  ORDER BY ranking, s.order_date)
-
-SELECT
-  customer_id,
-  product_name
-FROM ranked
-WHERE ranking = 1
-```
-
-To find the first item per customer, I ranked each order so that each customer's first order has the value 1 (PARTITION BY allows me to have separate rankings for each customer). This allows me to then only pull the orders with the rank 1. Since no exact time is given, it is impossible to tell which order took place first in the case of ties, so they are both given the ranking 1. Customer C also bought ramen twice on their first day, so SELECT DISTINCT is used to remove that redundancy.
-| customer_id | product_name |
-| ----------- | ------------ |
-| A           | curry        |
-| A           | sushi        |
-| B           | curry        |
-| C           | ramen        |
-
-## 2. In the first week after a customer becomes a member (including their join date), they earn 2x points on all items. Each $1 spent equates to 10 points, and sushi has a permanent 2x point multiplier. How many points do customers A and B have at the end of January?
+## 1. In the first week after a customer becomes a member (including their join date), they earn 2x points on all items. Each $1 spent equates to 10 points, and sushi has a permanent 2x point multiplier. How many points do customers A and B have at the end of January?
 
 This has a lot of variables taken into account when figuring out how many points each order gives. Also, it does not specify whether customers gain points BEFORE they become a member (I assumed it did not) or whether sushi multipliers stack for a 4x multiplier. (again, I assumed it did not)
 
@@ -79,6 +30,8 @@ This has a lot of variables taken into account when figuring out how many points
 WITH point_calc AS (
   SELECT
     s.customer_id,
+    m.product_name,
+    m.price,
     m.price * 10 +
     (CASE WHEN s.order_date BETWEEN ms.join_date AND ms.join_date + 6 THEN m.price * 10
       WHEN m.product_name = 'sushi' THEN m.price * 10 ELSE 0 END) AS points,
@@ -101,14 +54,17 @@ ORDER BY customer_id
 ```
 
 **point_calc**: This uses a CASE statement with multiple criteria: If the order took place on the day they became a member or any of the six days after, the points get multiplied 2x. Alternatively, if the order is sushi, it gets the same 2x multiplier. If neither happen, they are not multiplied. Orders after January are also filtered out as well as orders before each customer became a member.
-| customer_id | points | order_date               | join_date                |
-| ----------- | ------ | ------------------------ | ------------------------ |
-| B           | 200    | 2021-01-11T00:00:00.000Z | 2021-01-09T00:00:00.000Z |
-| A           | 300    | 2021-01-07T00:00:00.000Z | 2021-01-07T00:00:00.000Z |
-| A           | 240    | 2021-01-11T00:00:00.000Z | 2021-01-07T00:00:00.000Z |
-| A           | 240    | 2021-01-11T00:00:00.000Z | 2021-01-07T00:00:00.000Z |
-| A           | 240    | 2021-01-10T00:00:00.000Z | 2021-01-07T00:00:00.000Z |
-| B           | 120    | 2021-01-16T00:00:00.000Z | 2021-01-09T00:00:00.000Z |
+
+Only the `customer_id` and `points` columns are necessary here, but I added the rest to give a better understanding of how it works.
+| customer_id | product_name | price | points | order_date               | join_date                |
+| ----------- | ------------ | ----- | ------ | ------------------------ | ------------------------ |
+| B           | sushi        | 10    | 200    | 2021-01-11T00:00:00.000Z | 2021-01-09T00:00:00.000Z |
+| A           | curry        | 15    | 300    | 2021-01-07T00:00:00.000Z | 2021-01-07T00:00:00.000Z |
+| A           | ramen        | 12    | 240    | 2021-01-11T00:00:00.000Z | 2021-01-07T00:00:00.000Z |
+| A           | ramen        | 12    | 240    | 2021-01-11T00:00:00.000Z | 2021-01-07T00:00:00.000Z |
+| A           | ramen        | 12    | 240    | 2021-01-10T00:00:00.000Z | 2021-01-07T00:00:00.000Z |
+| B           | ramen        | 12    | 120    | 2021-01-16T00:00:00.000Z | 2021-01-09T00:00:00.000Z |
+
 
 Lastly, the main query puts it together by summing up the points.
 | customer_id | point_total |
