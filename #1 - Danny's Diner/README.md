@@ -46,7 +46,7 @@ This question just required the `sales` table. Since `order_date` only showed th
 ### 3. What was the first item from the menu purchased by each customer?
 
 ```sql
-WITH ranked AS
+WITH ranked AS (
 SELECT DISTINCT
   s.customer_id,
   s.order_date,
@@ -263,21 +263,24 @@ Here, a CASE statement is used to find the accurate amount of points per product
 
 ```sql
 WITH point_calc AS (
-SELECT
+  SELECT
     s.customer_id,
     m.price * 10 +
     (CASE WHEN s.order_date BETWEEN ms.join_date AND ms.join_date + 6 THEN m.price * 10
-     WHEN m.product_name = 'sushi' THEN m.price * 10 ELSE 0 END) AS points
-FROM dannys_diner.sales s
-JOIN dannys_diner.menu m
+      WHEN m.product_name = 'sushi' THEN m.price * 10 ELSE 0 END) AS points,
+    s.order_date,
+    ms.join_date
+  FROM dannys_diner.sales s
+  JOIN dannys_diner.menu m
     ON s.product_id = m.product_id
-JOIN dannys_diner.members ms
+  JOIN dannys_diner.members ms
     ON s.customer_id = ms.customer_id
-WHERE s.order_date < '2021-02-01')
-  
+  WHERE s.order_date < '2021-02-01'
+    AND s.order_date >= ms.join_date)
+
 SELECT
-    customer_id,
-    SUM(points) AS point_total
+  customer_id,
+  SUM(points) AS point_total
 FROM point_calc
 GROUP BY customer_id
 ORDER BY customer_id
@@ -287,12 +290,12 @@ The CTE again pulls relevant data from each table and has a long CASE statement 
 
 Some additional notes for this question:
 - It does not specify whether sushi should get multiplied a second time, making it 4x. For this scenario, I assumed it did not, so it only multiplies by 20 even if both criteria are met.
-- It does not specify whether orders before customers become a member count towards points. I assumed all orders count for points regardless, so I did not exclude orders from before the customer became a member. If I wanted to, I could add a second WHERE clause to only show orders that took place after the customer became a member.
+- It does not specify whether orders before customers become a member count towards points. I assumed they do not.
 
 | customer_id | point_total |
 | ----------- | ----------- |
-| A           | 1220        |
-| B           | 820         |
+| A           | 1020        |
+| B           | 320         |
 
 ### Bonus Question 1 - Join All The Things
 
