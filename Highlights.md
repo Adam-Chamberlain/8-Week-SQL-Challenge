@@ -8,6 +8,7 @@ This page showcases the problems within all eight case studies that were the mos
 - **[Question 1 - List of Exclusions/Extras per Order](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#1-generate-an-order-item-for-each-record-in-the-customers_orders-table-in-the-format-of-one-of-the-following)**
 - **[Question 2 - List of Ingredients per Order](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#2-generate-an-alphabetically-ordered-comma-separated-ingredient-list-for-each-pizza-order-from-the-customer_orders-table-and-add-a-2x-in-front-of-any-relevant-ingredients)**
 ### **[📺 Case Study 3: Foodie-Fi](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-3-foodie-fi)**
+- **[Question 1 - Average Time between Subscription and Start Date](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#1-how-many-days-on-average-does-it-take-for-a-customer-to-upgrade-to-an-annual-plan-from-the-day-they-join-foodie-fi)**
 ### **[🏦 Case Study 4: Data Bank](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-4-data-bank)**
 ### **[🏪 Case Study 5: Data Mart](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-5-data-mart)**
 ### **[🦞 Case Study 6: Clique Bait](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-6-clique-bait)**
@@ -424,6 +425,43 @@ Again, only the first two pizzas are shown.
 | 10       | Meat Lovers: BBQ Sauce, Bacon, Beef, Cheese, Chicken, Mushrooms, Pepperoni, Salami   |
 
 # 📺 3. Foodie-Fi
+
+This case study looks at a food-based streaming service, and it has data on customers and what subscription plans they have used.
+
+**[Case Study Website](https://8weeksqlchallenge.com/case-study-3/)**
+
+**[All of my Solutions](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/tree/main/%233%20-%20Foodie-Fi)**
+
+## 1. How many days on average does it take for a customer to upgrade to an annual plan from the day they join Foodie-Fi?
+
+In this database, every single customer starts with a free trial, and then they either upgrade to a basic monthly, pro monthly, or pro annual subscription or choose to not get a subscription. With that information, I can find the difference between the day they become a pro annual member and the day they started their free trial.
+
+```sql
+SELECT
+  ROUND(AVG(DATEDIFF(a.start_date, t.start_date)), 0) AS average
+FROM (
+  SELECT
+    customer_id,
+    plan_id,
+    start_date
+  FROM subscriptions
+  WHERE plan_id = 3) a
+JOIN (
+  SELECT
+    customer_id,
+    plan_id,
+    start_date
+  FROM subscriptions
+  WHERE plan_id = 0) t
+  ON a.customer_id = t.customer_id
+```
+Each subquery pulls rows where a customer signs up for a specific subscription; 3 equals annual membership (shortened to a) and 0 equals free trial. (shortened to t) The two subqueries are joined to show all customer IDs that have done a free trial AND signed up for an annual subscription, as shown in the table below.
+
+![image](https://github.com/user-attachments/assets/e6d42876-5a20-4117-9140-1359dcfff6f0)
+
+With DATEDIFF, I can get the difference between the annual membership start date and the free trial start date for each customer. The average of these differences is the final result.
+
+![image](https://github.com/user-attachments/assets/1b00c06b-262d-4236-9e07-92425991543a)
 
 # 🏦 4. Data Bank
 
