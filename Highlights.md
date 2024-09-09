@@ -46,15 +46,15 @@ The `sales` table shows the following transactions:
 
 ```sql
 WITH ranked AS (
-SELECT DISTINCT
-  s.customer_id,
-  s.order_date,
-  m.product_name,
-  RANK() OVER(PARTITION BY s.customer_id ORDER BY s.order_date) AS ranking
-FROM dannys_diner.sales s
-JOIN dannys_diner.menu m
-  ON s.product_id = m.product_id
-ORDER BY ranking, s.order_date)
+  SELECT DISTINCT
+    s.customer_id,
+    s.order_date,
+    m.product_name,
+    RANK() OVER(PARTITION BY s.customer_id ORDER BY s.order_date) AS ranking
+  FROM dannys_diner.sales s
+  JOIN dannys_diner.menu m
+    ON s.product_id = m.product_id
+  ORDER BY ranking, s.order_date)
 
 SELECT
   customer_id,
@@ -81,20 +81,20 @@ WITH point_calc AS (
     s.customer_id,
     m.price * 10 +
     (CASE WHEN s.order_date BETWEEN ms.join_date AND ms.join_date + 6 THEN m.price * 10
-     WHEN m.product_name = 'sushi' THEN m.price * 10 ELSE 0 END) AS points,
-     s.order_date,
-     ms.join_date
-FROM dannys_diner.sales s
-JOIN dannys_diner.menu m
+      WHEN m.product_name = 'sushi' THEN m.price * 10 ELSE 0 END) AS points,
+    s.order_date,
+    ms.join_date
+  FROM dannys_diner.sales s
+  JOIN dannys_diner.menu m
     ON s.product_id = m.product_id
-JOIN dannys_diner.members ms
+  JOIN dannys_diner.members ms
     ON s.customer_id = ms.customer_id
-WHERE s.order_date < '2021-02-01'
-AND s.order_date >= ms.join_date)
+  WHERE s.order_date < '2021-02-01'
+    AND s.order_date >= ms.join_date)
 
 SELECT
-    customer_id,
-    SUM(points) AS point_total
+  customer_id,
+  SUM(points) AS point_total
 FROM point_calc
 GROUP BY customer_id
 ORDER BY customer_id
