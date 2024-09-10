@@ -547,6 +547,7 @@ The `monthnum` column corresponds to `monthdate`, and the `totalnum` column corr
 **clean**: The `alldates` CTE is merged with the original CTE (named `cte`) via a LEFT JOIN to pull the total for each month, even if there were no transactions in a given month. This is named `monthly_total`. The other `total` column from the `alldates` CTE is used to calculate the end balance.
 
 `end_balance` is the tricky part. In the below example, there is only one `monthnum` for January and February, since the `totalnum` value for March is not included. (The WHERE clause removes that value, since it had not happened yet) Therefore, the end balance for both months is 312. For March, however, there is a `monthnum` row for both January's and March's transactions. These are added up using PARTITION BY to create an end balance of -640. The duplicate rows are removed in the final query.
+
 ![image](https://github.com/user-attachments/assets/de70c2c1-aeb2-4aee-81b9-df4579ea5796)
 
 **Final Query**: Finally, the `clean` CTE has the duplicate rows removed and the NULL values in the monthly totals changed to 0.
