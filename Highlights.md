@@ -1,5 +1,7 @@
 This page showcases the problems within all eight case studies that were the most challenging to solve and required the most complex and creative SQL queries. I also explained my thought process in each query much more in-depth.
 
+I have chosen 1-2 of the hardest challenges from each case study. You can view my solutions to all of the challenges in the respective case study folders.
+
 # Table of Contents
 
 ### **[🍜 Case Study 1: Danny's Diner](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#1--dannys-diner)**
@@ -555,6 +557,64 @@ The `monthnum` column corresponds to `monthdate`, and the `totalnum` column corr
 ![image](https://github.com/user-attachments/assets/c643c95f-a974-434e-9277-d35ce3297a14)
 
 # 🏪 5. Data Mart
+
+This case study looks at an online supermarket that has data from 2018 through 2020 within one large table. Unlike other case studies, this just has one large table, but it needed to be cleaned heavily beforehand.
+
+**[Case Study Website](https://8weeksqlchallenge.com/case-study-5/)**
+
+**[All of my Solutions](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/tree/main/%235%20-%20Data%20Mart)**
+
+## 1. Data Cleaning
+
+In a single query, perform the following operations:
+- Convert the week_date to a DATE format
+- Add a week_number as the second column for each week_date value, for example any value from the 1st of January to 7th of January will be 1, 8th to 14th will be 2 etc
+- Add a month_number with the calendar month for each week_date value as the 3rd column
+- Add a calendar_year column as the 4th column containing either 2018, 2019 or 2020 values
+- Add a new column called age_band after the original segment column using the following mapping on the number inside the segment value: 1 - Young Adults, 2 - Middle Aged, 3 or 4 - Retirees
+- Add a new demographic column using the following mapping for the first letter in the segment values: C - Couples, F - Families
+- Ensure all null string values with an "unknown" string value in the original segment column as well as the new age_band and demographic columns
+- Generate a new avg_transaction column as the sales value divided by transactions rounded to 2 decimal places for each record
+
+Here is what the original table looks like:
+
+![image](https://github.com/user-attachments/assets/5273019b-645b-4b19-89a3-220b293126b2)
+
+```sql
+SELECT
+  clean_date AS week_date,
+  WEEK(clean_date) AS week_number,
+  MONTH(clean_date) AS month_number,
+  YEAR(clean_date) AS calendar_year,
+  region,
+  platform,
+  CASE WHEN segment LIKE 'null' THEN NULL ELSE segment END AS segment,
+  CASE WHEN RIGHT(segment, 1) = 1 THEN 'Young Adults'
+    WHEN RIGHT(segment, 1) = 2 THEN 'Middle Aged'
+    WHEN RIGHT(segment, 1) IN(3, 4) THEN 'Retirees' ELSE NULL END AS age_band,
+  CASE WHEN LEFT(segment, 1) = 'C' THEN 'Couples'
+    WHEN LEFT(segment, 1) = 'F' THEN 'Families' ELSE NULL END AS demographic,
+  customer_type,
+  transactions,
+  sales,
+  ROUND(sales / transactions, 2) AS avg_transaction
+FROM (
+  SELECT *,
+    CAST(CONCAT(
+      RIGHT(week_date, 2), '/',
+      CASE WHEN MID(week_date, 3, 1) = '/' AND MID(week_date, 6, 1) = '/' THEN MID(week_date, 4, 2)
+      WHEN MID(week_date, 3, 1) = '/' AND MID(week_date, 5, 1) = '/' THEN MID(week_date, 4, 1)
+      WHEN MID(week_date, 2, 1) = '/' AND MID(week_date, 5, 1) = '/' THEN MID(week_date, 3, 2)
+      ELSE MID(week_date, 3, 1) END, '/',
+      CASE WHEN MID(week_date, 3, 1) = '/' THEN LEFT(week_date, 2) ELSE LEFT(week_date, 1) END)
+    AS DATE) AS clean_date
+  FROM weekly_sales) clean
+```
+First off, the date was formated as dd/mm/yy rather than yyyy/mm/dd, and it was not formatted in DATE format. I started off by creating a subquery that rearranges the date using LEFT, RIGHT, and MID. The problem is, the amount of characters was inconsistent between dates. (for example: 31/12/20 and 8/2/20) I used CASE statements to find the location of the backslashes, which would determine what characters would be pulled next. If it finds the first backslash at character 3 (when the date is 2 digits long) AND the second backslash at character 6 (when the month is also 2 digits long) it pulls the 4th and 5th digit as the date. I then used CAST to convert the results to the proper DATE format. This allowed me to format the first four columns.
+
+For the rest, I used the `segment` column to get age and demographic data using LEFT and RIGHT. For example, the value C1 would mean the customers are a couple (C) and young adults (1). The NULL values also had to be changed, since it was the text "null" rather than the actual value.
+
+![image](https://github.com/user-attachments/assets/aec043e1-c19d-41e1-a35d-1067309a4a94)
 
 # 🦞 6. Clique Bait
 
