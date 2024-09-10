@@ -10,6 +10,7 @@ This page showcases the problems within all eight case studies that were the mos
 ### **[📺 Case Study 3: Foodie-Fi](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-3-foodie-fi)**
 - **[Question 1 - Average Time between Subscription and Start Date](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#1-how-many-days-on-average-does-it-take-for-a-customer-to-upgrade-to-an-annual-plan-from-the-day-they-join-foodie-fi)**
 ### **[🏦 Case Study 4: Data Bank](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-4-data-bank)**
+- **[Question 1 - Monthly Closing Balance](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#1-what-is-the-closing-balance-for-each-customer-at-the-end-of-the-month)**
 ### **[🏪 Case Study 5: Data Mart](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-5-data-mart)**
 ### **[🦞 Case Study 6: Clique Bait](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-6-clique-bait)**
 ### **[🧥 Case Study 7: Balanced Tree Clothing Co.](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-7-balanced-tree-clothing-co)**
@@ -434,7 +435,7 @@ This case study looks at a food-based streaming service, and it has data on cust
 
 ## 1. How many days on average does it take for a customer to upgrade to an annual plan from the day they join Foodie-Fi?
 
-In this database, every single customer starts with a free trial, and then they either upgrade to a basic monthly, pro monthly, or pro annual subscription or choose to not get a subscription. With that information, I can find the difference between the day they become a pro annual member and the day they started their free trial.
+In this database, every single customer starts with a free trial, and then they either upgrade to a basic monthly, pro monthly, or pro annual subscription, or choose to not get a subscription. With that information, I can find the difference between the day they become a pro annual member and the day they started their free trial.
 
 ```sql
 SELECT
@@ -464,6 +465,93 @@ With DATEDIFF, I can get the difference between the annual membership start date
 ![image](https://github.com/user-attachments/assets/1b00c06b-262d-4236-9e07-92425991543a)
 
 # 🏦 4. Data Bank
+
+Data bank is a digital bank that stores money as well as data. Customers are given a specific amount of cloud storage depending on how much money they have stored.
+
+**[Case Study Website](https://8weeksqlchallenge.com/case-study-4/)**
+
+**[All of my Solutions](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/tree/main/%234%20-%20Data%20Bank)**
+
+## 1. What is the closing balance for each customer at the end of the month?
+
+This was probably the hardest challenge within all eight case studies. The `customer_transactions` table has a list of all transactions that took place within a 4 month timeframe, as shown in the image below. This includes purchases, deposits, and withdrawals. The question is asking for a closing balance for each customer in each month; this is tricky because not all customers have transactions within each month.
+
+![image](https://github.com/user-attachments/assets/b8e9dd69-d0a2-4c9f-a1f4-baf98fb94f5d)
+
+```sql
+CREATE TABLE temp_table (
+monthnum INT PRIMARY KEY,
+monthdate DATE);
+
+INSERT INTO temp_table
+  (monthnum, monthdate)
+VALUES
+  (1, '2020-01-31'),
+  (2, '2020-02-29'),
+  (3, '2020-03-31'),
+  (4, '2020-04-30');
+  
+WITH cte AS (
+SELECT
+  customer_id,
+  MONTH(txn_date) AS totalnum,
+  SUM(CASE WHEN txn_type = 'deposit' THEN txn_amount ELSE 0 END) +
+  SUM(CASE WHEN txn_type IN('purchase', 'withdrawal') THEN (-1 * txn_amount) ELSE 0 END) AS total
+FROM customer_transactions
+GROUP BY customer_id, totalnum
+ORDER BY customer_id, totalnum),
+
+alldates AS (
+SELECT DISTINCT
+  customer_id,
+  monthnum,
+  totalnum,
+  monthdate,
+  total
+FROM cte, temp_table
+ORDER BY customer_id, monthnum),
+
+clean AS (
+SELECT
+  ad.customer_id,
+  ad.monthnum,
+  ad.totalnum,
+  ad.monthdate AS end_month,
+  c.total AS monthly_total,
+  ad.total,
+  SUM(ad.total) OVER (PARTITION BY ad.customer_id, ad.monthnum) AS end_balance
+FROM alldates ad
+LEFT JOIN cte c
+  ON ad.monthnum = c.totalnum AND ad.customer_id = c.customer_id
+WHERE ad.monthnum >= ad.totalnum)
+
+SELECT DISTINCT
+  customer_id,
+  end_month,
+  CASE WHEN monthly_total IS NULL THEN 0 ELSE monthly_total END AS monthly_change,
+  end_balance
+FROM clean
+```
+**temp_table**: There's a lot to break down here. First of all, I created a temporary table to list the final date of each month. This allows me to create a row for each customer in each month, regardless of if they had any transactions in a given month.
+
+**cte**: The first CTE creates a monthly total for each month that a customer has a transaction. CASE statements are used to determine what type of transaction it is; purchases and withdrawals are subtracted, and deposits are added. `totalnum` refers to the month that each transaction took place in; this will make more sense in the next two CTEs.
+
+![image](https://github.com/user-attachments/assets/8b0642f9-f8b3-4c2e-97d5-2181c8b1967a)
+
+**alldates**: The first CTE is then merged with the temporary table to create a corresponding month row for each existing row. For each month that had a transaction, there are now four rows, one for each month. While this seems messy, this is extremely important for the next CTE.
+
+The `monthnum` column corresponds to `monthdate`, and the `totalnum` column corresponds to the month that the `total` is from.
+
+![image](https://github.com/user-attachments/assets/25ea71d6-4098-4a7d-8c72-e6496fd082a7)
+
+**clean**: The `alldates` CTE is merged with the original CTE (named `cte`) via a LEFT JOIN to pull the total for each month, even if there were no transactions in a given month. This is named `monthly_total`. The other `total` column from the `alldates` CTE is used to calculate the end balance.
+
+`end_balance` is the tricky part. In the below example, there is only one `monthnum` for January and February, since the `totalnum` value for March is not included. (The WHERE clause removes that value, since it had not happened yet) Therefore, the end balance for both months is 312. For March, however, there is a `monthnum` row for both January's and March's transactions. These are added up using PARTITION BY to create an end balance of -640. The duplicate rows are removed in the final query.
+![image](https://github.com/user-attachments/assets/de70c2c1-aeb2-4aee-81b9-df4579ea5796)
+
+**Final Query**: Finally, the `clean` CTE has the duplicate rows removed and the NULL values in the monthly totals changed to 0.
+
+![image](https://github.com/user-attachments/assets/c643c95f-a974-434e-9277-d35ce3297a14)
 
 # 🏪 5. Data Mart
 
