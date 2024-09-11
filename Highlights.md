@@ -17,7 +17,9 @@ I have chosen 1-2 of the hardest challenges from each case study. You can view m
 - **[Question 1 - Data Cleaning](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#1-data-cleaning)**
 - **[Question 2 - % Sales by Demographic](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#2-what-is-the-percentage-of-sales-by-demographic-for-each-year-in-the-dataset)**
 ### **[🦞 Case Study 6: Clique Bait](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-6-clique-bait)**
+- **[Question 1 - Top 3 Products Purchased](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#1-what-are-the-top-3-products-by-purchases)**
 ### **[🧥 Case Study 7: Balanced Tree Clothing Co.](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-7-balanced-tree-clothing-co)**
+- **[Question 1 - Most Common Combinations of Three Products](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-7-balanced-tree-clothing-co)**
 ### **[🖱️ Case Study 8: Fresh Segments](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#%EF%B8%8F-8-fresh-segments)**
 
 # 1. 🍜 Danny's Diner
@@ -666,6 +668,130 @@ With that, each demographic's sales value is divided by total sales to find the 
 
 # 🦞 6. Clique Bait
 
+This case study looks at website and visit data for an online seafood seller. Lots of information is provided, including individual steps that are taken during each individual user's visit to the website.
+
+**[Case Study Website](https://8weeksqlchallenge.com/case-study-6/)**
+
+**[All of my Solutions](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/tree/main/%236%20-%20Clique%20Bait)**
+
+## 1. What are the top 3 products by purchases?
+
+First, the tables must be understood to figure out how to properly handle this question. Below is the `events` table, which shows each step that each customer took when visiting the website in a given visit, ordered by sequence number.
+
+![image](https://github.com/user-attachments/assets/2de76707-cd49-452b-964e-a23e2df6e28c)
+
+Additionally, the `event_identifier` table shows what each event type means:
+
+![image](https://github.com/user-attachments/assets/d8a8e2f4-980e-46c1-a54c-08e0799def67)
+
+And `page_hierarchy` shows what each page ID means:
+
+![image](https://github.com/user-attachments/assets/b7885bd5-2f84-4090-8e3e-b3fd34218e5a)
+
+So with the example in the `events` table, the customer adds three products to their cart, and at the end, they check out. In some cases, however, the customer does not check out, so the purchase was not fully completed. These instances need to be filtered out, so we cannot just search for all products where `page_id` = 2.
+
+```sql
+WITH cte AS (SELECT
+    a.visit_id,
+    a.page_id AS purchases,
+    b.page_id AS checkout
+  FROM (
+    SELECT
+      visit_id,
+      page_id
+    FROM events
+    WHERE event_type = 2) a
+  JOIN (
+    SELECT
+      visit_id,
+      page_id
+    FROM events
+    WHERE page_id = 13) b
+  ON a.visit_id = b.visit_id)
+  
+SELECT
+  page_name,
+  COUNT(purchases) AS amount
+FROM cte c
+JOIN page_hierarchy ph
+  ON c.purchases = ph.page_id
+GROUP BY page_name
+ORDER BY amount DESC
+ LIMIT 3
+```
+First off, I used two subqueries. The first lists all items that were purchased, regardless of if it was a completed transaction. The page IDs get identified further at a later step.
+
+![image](https://github.com/user-attachments/assets/8f303ce0-b48e-4263-8b6a-fe0f8785126a)
+
+The other subquery pulls all rows where `page_id` equals 13, which is the confirmation screen that corresponds with a successful check-out.
+
+![image](https://github.com/user-attachments/assets/cdefdba4-a128-4018-bbe0-b00a0721bc2e)
+
+These two tables are combined using JOIN to list all purchases that took place when the customer also checked out on the visit. With that, I could then count the number of each products that were successfully purchased.
+
+![image](https://github.com/user-attachments/assets/c65565d2-99a7-437e-893e-0e567921d1f5)
+
+The final query counts the amount of each product that was purchased and identifies the name of each product based on the page ID.
+
+![image](https://github.com/user-attachments/assets/8179c774-b01f-46ed-ad1c-3589f21202aa)
+
 # 🧥 7. Balanced Tree Clothing Co.
 
+This case study looks at data within an online clothing company. Clothes are broken down into categories and segments, and often times, multiple of the same type of clothing is bought in one transaction, so accurate financial info must be found by joining tables to identify categories and segments and using complex queries.
+
+**[Case Study Website](https://8weeksqlchallenge.com/case-study-7/)**
+
+**[All of my Solutions](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/tree/main/%237%20-%20Balanced%20Tree%20Clothing%20Co)**
+
+## 1. What is the most common combination of at least 1 quantity of any 3 products in a 1 single transaction?
+
+This was one of the trickiest challenges overall. With 12 different products, many combinations are possible, and it becomes even trickier when some transactions purchase more than three products, creating multiple combinations in one transaction.
+
+```sql
+WITH products AS (
+  SELECT
+    txn_id,
+    product_name
+  FROM sales s
+  JOIN product_details pd
+    ON s.prod_id = pd.product_id)
+
+SELECT
+  p.product_name AS one,
+  p2.product_name AS two,
+  p3.product_name AS three,
+  COUNT(*) AS amount
+FROM products p
+JOIN products p2
+  ON p.txn_id = p2.txn_id
+  AND p.product_name < p2.product_name
+JOIN products p3
+  ON p.txn_id = p3.txn_id
+  AND p2.product_name < p3.product_name
+GROUP BY p.product_name, p2.product_name, p3.product_name
+ORDER BY amount DESC
+```
+
+First off, each transaction in the `sales` table shows a product ID rather than the product's name, so the CTE labels them by name. Here are all of the products bought by transaction ID 54f307.
+
+![image](https://github.com/user-attachments/assets/a600d98b-7879-4bf0-a97a-5dc3d413a7f2)
+
+The table is then joined three times in a way that creates unique combinations. They are joined by making sure the second product is GREATER than the first product. (meaning it is after the first product alphabetically) With the same transaction ID, there are six possible two-way combinations:
+
+![image](https://github.com/user-attachments/assets/1ed41cbd-decc-4f58-aece-94bcd7abd6af)
+
+Again, it is joined a third time using the same conditions. Product 1 has to be before product 2 alphabetically, and product 2 has to be before product 3. Here, there are four unique three-way combinations:
+
+![image](https://github.com/user-attachments/assets/fcadcbee-1ba3-4b5d-859e-24c31a9090d3)
+
+Finally, the query counts the amount of times each unique combination took place. It does not have to worry about the same combination being in a different order, since they were organized alphabetically.
+
+![image](https://github.com/user-attachments/assets/95fc56b6-25a5-4de8-beb5-379437745263)
+
 # 🖱️ 8. Fresh Segments
+
+This case study looks at a digital marketing agency and tracks monthly data on how much interest their clients receive. 
+
+**[Case Study Website](https://8weeksqlchallenge.com/case-study-8/)**
+
+**[All of my Solutions](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/tree/main/%238%20-%20Fresh%20Segments)**
