@@ -15,6 +15,7 @@ I have chosen 1-2 of the hardest challenges from each case study. You can view m
 - **[Question 1 - Monthly Closing Balance](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#1-what-is-the-closing-balance-for-each-customer-at-the-end-of-the-month)**
 ### **[🏪 Case Study 5: Data Mart](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-5-data-mart)**
 - **[Question 1 - Data Cleaning](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#1-data-cleaning)**
+- **[Question 2 - % Sales by Demographic](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#2-what-is-the-percentage-of-sales-by-demographic-for-each-year-in-the-dataset)**
 ### **[🦞 Case Study 6: Clique Bait](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-6-clique-bait)**
 ### **[🧥 Case Study 7: Balanced Tree Clothing Co.](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-7-balanced-tree-clothing-co)**
 ### **[🖱️ Case Study 8: Fresh Segments](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#%EF%B8%8F-8-fresh-segments)**
@@ -616,6 +617,52 @@ First off, the date was formated as dd/mm/yy rather than yyyy/mm/dd, and it was 
 For the rest, I used the `segment` column to get age and demographic data using LEFT and RIGHT. For example, the value C1 would mean the customers are a couple (C) and young adults (1). The NULL values also had to be changed, since it was the text "null" rather than the actual value.
 
 ![image](https://github.com/user-attachments/assets/aec043e1-c19d-41e1-a35d-1067309a4a94)
+
+## 2. What is the percentage of sales by demographic for each year in the dataset?
+
+With the cleaned dataset from the prior question, it is much easier to find key trends such as the percentage of sales by demographic. To solve this, I first find the total amount of sales per demographic in each year, and I can then use those numbers to find the percentages.
+
+```sql
+WITH cte AS (
+  SELECT
+    cl.calendar_year,
+    SUM(sales) AS total_sales,
+    c_sales,
+    f_sales
+  FROM clean cl
+  JOIN (
+    SELECT
+      calendar_year,
+      SUM(sales) AS c_sales
+    FROM clean
+    WHERE demographic = 'Couples'
+    GROUP BY calendar_year) c
+  ON cl.calendar_year = c.calendar_year
+  JOIN (
+    SELECT
+      calendar_year,
+      SUM(sales) AS f_sales
+    FROM clean
+    WHERE demographic = 'Families'
+    GROUP BY calendar_year) f
+  ON cl.calendar_year = f.calendar_year
+  GROUP BY cl.calendar_year, c_sales, f_sales)
+  
+  SELECT
+  calendar_year,
+  ROUND(c_sales / total_sales * 100, 2) AS couples,
+  ROUND(f_sales / total_sales * 100, 2) AS families,
+  ROUND((1 - ((c_sales + f_sales) / total_sales)) * 100, 2) AS unknown
+  FROM cte
+  ORDER BY calendar_year
+```
+First, two subqueries calculate the total sales for each demographic in each year. This pulls from the `clean` table from the prior question. The two subqueries are joined to create one table that shows the total overall sales as well as the total sales for each demographic.
+
+![image](https://github.com/user-attachments/assets/9db674d7-7397-498c-96f9-ad7ee5135109)
+
+With that, each demographic's sales value is divided by total sales to find the percentage. Additionally, I calculated the percentage of sales where the demographic was unknown. Adding the two demographics and dividing it by total sales shows the total percentage of BOTH demographics, so subtracting that amount from 1 gives the remaining percentage.
+
+![image](https://github.com/user-attachments/assets/4facfb5d-d07c-44dd-a34c-c82b31671e7f)
 
 # 🦞 6. Clique Bait
 
