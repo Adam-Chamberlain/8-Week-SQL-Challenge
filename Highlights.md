@@ -19,7 +19,7 @@ I have chosen 1-2 of the hardest challenges from each case study. You can view m
 ### **[🦞 Case Study 6: Clique Bait](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-6-clique-bait)**
 - **[Question 1 - Top 3 Products Purchased](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#1-what-are-the-top-3-products-by-purchases)**
 ### **[🧥 Case Study 7: Balanced Tree Clothing Co.](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-7-balanced-tree-clothing-co)**
-- **[Question 1 - Most Common Combinations of Three Products](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#-7-balanced-tree-clothing-co)**
+- **[Question 1 - Most Common Combinations of Three Products](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#1-what-is-the-most-common-combination-of-at-least-1-quantity-of-any-3-products-in-a-1-single-transaction)**
 ### **[🖱️ Case Study 8: Fresh Segments](https://github.com/Adam-Chamberlain/8-Week-SQL-Challenge/blob/main/Highlights.md#%EF%B8%8F-8-fresh-segments)**
 
 # 1. 🍜 Danny's Diner
